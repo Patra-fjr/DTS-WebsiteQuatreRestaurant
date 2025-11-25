@@ -1,8 +1,8 @@
 <?php
 // Konfigurasi Database
-$host = 'localhost';
+$host = 'mysql';
 $user = 'root';
-$pass = ''; // Sesuaikan password MySQL Anda
+$pass = 'password'; // Sesuaikan password MySQL Anda
 $dbname = 'db_resto';
 
 // Koneksi ke database

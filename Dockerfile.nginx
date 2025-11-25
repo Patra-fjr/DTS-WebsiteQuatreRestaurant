@@ -1,0 +1,7 @@
+    # Custom Nginx Dockerfile 
+FROM nginx 
+COPY ./default.conf /etc/nginx/conf.d/default.conf 
+# Expose port 85
+EXPOSE 85
+# Command untuk menjalankan nginx 
+CMD ["nginx", "-g", "daemon off;"] 

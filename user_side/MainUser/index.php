@@ -1,4 +1,4 @@
-    <?php
+<?php
     // "Detektif" Error PHP
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);
@@ -58,10 +58,10 @@
                     // ==========================================
                     if ($gambar_nama) {
                         // Alamat lengkap ke folder assets admin
-                        $gambar_path = 'http://localhost/website_quatre/admin_side/assets/image/' . htmlspecialchars($gambar_nama);
+                        $gambar_path = 'http://localhost:85/admin_side/assets/image/' . htmlspecialchars($gambar_nama);
                     } else {
                         // Alamat lengkap ke placeholder (jika ada di folder assets admin)
-                        $gambar_path = 'http://localhost/website_quatre/admin_side/assets/image/placeholder.jpg';
+                        $gambar_path = 'http://localhost:85/admin_side/assets/image/placeholder.jpg';
                     }
                     $allMenu[] = [
                         'id'          => $row['id_menu'],

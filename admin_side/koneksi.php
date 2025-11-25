@@ -1,13 +1,13 @@
 <?php
 
 // Biasanya "localhost" jika server database ada di komputer yang sama.
-$host = "localhost";
+$host = "mysql";
 
 // Username default untuk XAMPP adalah "root".
 $username_db = "root";
 
 // Password default untuk XAMPP adalah kosong ("").
-$password_db = "";
+$password_db = "password";
 
 // Nama database yang sudah kamu buat di phpMyAdmin.
 $nama_database = "db_resto";
