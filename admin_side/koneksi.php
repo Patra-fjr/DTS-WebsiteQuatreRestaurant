@@ -2,6 +2,8 @@
 
 //buat koneksi ygy
 
+//komen aja
+
 // Biasanya "localhost" jika server database ada di komputer yang sama.
 $host = "mysql";
 
