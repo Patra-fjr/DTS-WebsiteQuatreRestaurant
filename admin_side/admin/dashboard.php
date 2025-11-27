@@ -1,8 +1,5 @@
 <?php
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 // Langkah 1: Mulai session dan pasang "satpam"
 session_start();
 if (!isset($_SESSION['login'])) {
