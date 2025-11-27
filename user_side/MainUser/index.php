@@ -1,4 +1,5 @@
 <?php
+    // ini ngetes kalo mau apus silahkan
     // "Detektif" Error PHP
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);
