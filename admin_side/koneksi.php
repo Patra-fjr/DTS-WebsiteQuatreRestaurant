@@ -1,5 +1,7 @@
 <?php
 
+//buat koneksi ygy
+
 // Biasanya "localhost" jika server database ada di komputer yang sama.
 $host = "mysql";
 
