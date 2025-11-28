@@ -5,6 +5,7 @@ require 'koneksi.php';
 
 
 //buat login guys
+//admin harus login dulu
 
 // Inisialisasi variabel untuk menampung pesan
 $error_login = '';

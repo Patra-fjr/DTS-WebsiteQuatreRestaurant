@@ -1,5 +1,7 @@
 <?php
 
+// ini buat logout
+
 session_start();
 
 session_unset();
