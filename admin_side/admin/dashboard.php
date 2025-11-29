@@ -1,11 +1,21 @@
 <?php
 
-// Langkah 1: Mulai session dan pasang "satpam"
+// Langkah 1: Mulai session
 session_start();
+
+// --- BAGIAN TAMBAHAN (ANTI CACHE / ANTI BACK BUTTON) ---
+// Ini memerintahkan browser: "JANGAN SIMPAN halaman ini di memori!"
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+// -------------------------------------------------------
+
+// Langkah 2: Cek apakah user login
 if (!isset($_SESSION['login'])) {
     header("Location: ../login.php");
     exit;
 }
+
 require '../koneksi.php';
 
 // 1. Query untuk PENDAPATAN HARI INI
