@@ -157,17 +157,28 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ==========================================================
-    // BAGIAN 5: FIX BUG BACK BUTTON (Security) - TAMBAHAN BARU
+    // BAGIAN 5: FIX BUG BACK BUTTON (METODE JEBAKAN HISTORY)
     // ==========================================================
-    // Code ini memaksa browser reload jika user menekan tombol Back
+    
+    // 1. Paksa browser reload jika mendeteksi load dari cache (BFCache)
     window.addEventListener("pageshow", function (event) {
         var historyTraversal = event.persisted || 
                                (typeof window.performance != "undefined" && 
                                 window.performance.navigation.type === 2);
-        
         if (historyTraversal) {
-            // Paksa reload agar PHP mengecek ulang session
             window.location.reload();
         }
     });
+
+    // 2. Manipulasi History (Agar tombol Back jadi tidak berguna)
+    // Ini akan menumpuk history baru setiap kali halaman dimuat
+    window.history.pushState(null, "", window.location.href);
+    
+    // Saat tombol Back ditekan, fungsi ini akan jalan
+    window.onpopstate = function () {
+        // Dorong user maju lagi (mencegah mundur)
+        window.history.pushState(null, "", window.location.href);
+        // Paksa reload agar script PHP 'satpam' bekerja
+        window.location.reload();
+    };
 // Akhir dari DOMContentLoaded
