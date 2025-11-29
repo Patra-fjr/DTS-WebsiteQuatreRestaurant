@@ -2,6 +2,8 @@
 
 // ini buat logout
 
+//fix bug cache logout
+
 session_start();
 
 session_unset();
