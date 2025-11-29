@@ -3,7 +3,7 @@ name: Deploy to Docker
 
 on:
   push:
-    branches: [master]
+    branches: [master, 'feature/*', 'bugfix/*', 'hotfix/*', 'release/*', 'chore/*']
 
 jobs:
   deploy:
