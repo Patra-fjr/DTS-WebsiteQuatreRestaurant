@@ -154,4 +154,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-}); // Akhir dari DOMContentLoaded
+});
+
+// ==========================================================
+    // BAGIAN 5: FIX BUG BACK BUTTON (Security) - TAMBAHAN BARU
+    // ==========================================================
+    // Code ini memaksa browser reload jika user menekan tombol Back
+    window.addEventListener("pageshow", function (event) {
+        var historyTraversal = event.persisted || 
+                               (typeof window.performance != "undefined" && 
+                                window.performance.navigation.type === 2);
+        
+        if (historyTraversal) {
+            // Paksa reload agar PHP mengecek ulang session
+            window.location.reload();
+        }
+    });
+// Akhir dari DOMContentLoaded
