@@ -36,7 +36,7 @@ if (!empty($_SESSION['cart'])) {
             </a>
         </div>
         
-        <img src="../assets/image/banner.png" alt="Quatre's Restaurant" class="banner-img"> <div class="banner-overlay">
+        <img src="../assets/banner.png" alt="Quatre's Restaurant" class="banner-img"> <div class="banner-overlay">
             <h2>Selamat Datang di</h2>
             <h1>Quatre's Restaurant</h1>
             <p>Nikmati cita rasa Italia autentik dengan pelayanan terbaik</p>
