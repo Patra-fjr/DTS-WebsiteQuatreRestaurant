@@ -1,75 +1,89 @@
 name: Deploy to All Laptops
 
+
 on:
   push:
     branches: [master, 'feature/*', 'bugfix/*', 'hotfix/*', 'release/*', 'chore/*']
 
 jobs:
-  # ==================================================
-  # JOB 1: DEPLOY KE LAPTOP TAUFIK
-  # ==================================================
-  deploy-taufik:  # ✅ BENAR (Pakai strip, tidak ada spasi)
+  deploy-taufik:
     runs-on: [self-hosted, my-laptop] 
-    
+
     steps:
       - name: Test version
         run: echo "VERSION 3"
 
+      # 1. Checkout kode dari GitHub
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2. Set up Docker (optional kalau docker belum jalan)
       - name: Ensure Docker is running
-        run: service docker start || true
+        run: |
+          service docker start || true
 
+      # 3. Show docker info
       - name: Docker info
         run: docker info
 
+      # 4. Pull latest images (optional)
       - name: Pull latest images
         run: docker compose pull || true
 
+      # 5. Stop container lama
       - name: Stop existing containers
         run: docker compose down || true
 
+      # 6. Build ulang project
       - name: Build images
         run: docker compose build --no-cache
 
+      # 7. Start container baru
       - name: Start containers
         run: docker compose up -d
 
+      # 8. Check running status
       - name: Check running containers
         run: docker ps -a
 
-  # ==================================================
-  # JOB 2: DEPLOY KE LAPTOP PUTRA
-  # ==================================================
-  deploy-putra:  # ✅ PERBAIKAN: Ubah 'deploy putra' jadi 'deploy-putra'
+
+  deploy-putra:
     runs-on: [self-hosted, laptop-putra] 
-    needs: [] # ✅ BENAR: Ini bikin dia jalan paralel (barengan)
+    needs: []
 
     steps:
       - name: Test version
         run: echo "VERSION 3"
 
+      # 1. Checkout kode dari GitHub
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2. Set up Docker (optional kalau docker belum jalan)
       - name: Ensure Docker is running
-        run: service docker start || true
+        run: |
+          service docker start || true
 
+      # 3. Show docker info
       - name: Docker info
         run: docker info
 
+      # 4. Pull latest images (optional)
       - name: Pull latest images
         run: docker compose pull || true
 
+      # 5. Stop container lama
       - name: Stop existing containers
         run: docker compose down || true
 
+      # 6. Build ulang project
       - name: Build images
         run: docker compose build --no-cache
 
+      # 7. Start container baru
       - name: Start containers
         run: docker compose up -d
 
+      # 8. Check running status
       - name: Check running containers
         run: docker ps -a
