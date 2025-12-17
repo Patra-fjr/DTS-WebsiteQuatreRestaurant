@@ -37,7 +37,7 @@ $total_harga_final = $total_harga * 1.1;
 
 
 // 4. Buat ID & Tanggal (Sesuai tabel orders-mu)
-$id_order_baru = 'ORD' . date('YmdHis') . rand(10,99);
+$id_order_baru = rand(100000, 999999);
 $tanggal_sekarang = date("Y-m-d");
 $waktu_sekarang = date("H:i:s");
 $status_order = 'proses';
