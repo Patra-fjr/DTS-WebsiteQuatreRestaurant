@@ -44,13 +44,14 @@ services:
       - mysql_data:/var/lib/mysql
     ports:
       - "3309:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5  
     networks:
       - app-network
-    healthcheck:
-    test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-    interval: 10s
-    timeout: 5s
-    retries: 5
+    
 
   # phpMyAdmin
   phpmyadmin:
