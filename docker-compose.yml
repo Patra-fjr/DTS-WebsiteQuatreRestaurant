@@ -1,5 +1,5 @@
 services:
-  # Nginx Web Server (Custom Build)
+  # Nginx Web Server
   nginx:
     build:
       context: .
@@ -13,7 +13,7 @@ services:
     networks:
       - app-network
 
-  # PHP-FPM (untuk Nginx)
+  # PHP-FPM
   php:
     build:
       context: .
@@ -46,8 +46,13 @@ services:
       - "3309:3306"
     networks:
       - app-network
+    healthcheck:
+    test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
 
-  # phpMyAdmin untuk Database Management
+  # phpMyAdmin
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     ports:
@@ -60,11 +65,30 @@ services:
     networks:
       - app-network
 
-# Persistent Volume untuk MySQL Data
+  # --- BACKEND SPRING BOOT ---
+  # Perhatikan: Bagian ini sekarang sejajar dengan service lain (tidak menjorok ke dalam)
+  backend-spring:
+    build: 
+      context: ./backend  # Pastikan nama folder project spring boot kamu adalah 'backend'
+      dockerfile: Dockerfile
+    container_name: quatre-spring-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/db_resto?allowPublicKeyRetrieval=true&useSSL=false
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=password
+    networks:
+      - app-network
+
+# Persistent Volume
 volumes:
   mysql_data:
 
-# Custom Network untuk Container Communication
+# Custom Network
 networks:
   app-network:
     driver: bridge
