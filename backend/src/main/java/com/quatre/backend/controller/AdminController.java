@@ -4,45 +4,54 @@ import com.quatre.backend.model.Admin;
 import com.quatre.backend.repository.AdminRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder; // Import untuk Hashing
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admins")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // Agar bisa diakses dari PHP/Frontend manapun
 public class AdminController {
 
     @Autowired
     private AdminRepository adminRepository;
 
-    // Buat alat untuk hashing
+    // Alat untuk enkripsi/hashing password
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    // ... (kode GET ALL tetap sama) ...
+    // ==========================================
+    // 1. GET ALL ADMINS (Lihat semua admin) - INI YANG TADI HILANG
+    // ==========================================
+    @GetMapping
+    public List<Admin> getAllAdmins() {
+        return adminRepository.findAll();
+    }
 
-    // ADD NEW ADMIN (Dengan Hashing)
+    // ==========================================
+    // 2. ADD ADMIN (Tambah admin baru dengan Hashing)
+    // ==========================================
     @PostMapping("/add")
     public Admin createAdmin(@RequestBody Admin admin) {
-        // 1. Generate ID jika kosong
+        // Generate ID otomatis jika kosong (misal: ad123)
         if (admin.getIdAdmin() == null || admin.getIdAdmin().isEmpty()) {
              String randomId = "ad" + (int)(Math.random() * 1000);
              admin.setIdAdmin(randomId);
         }
 
-        // 2. HASHING PASSWORD (PENTING!)
-        // Password asli "rahasia123" diubah jadi "$2a$10$xd....."
+        // ENKRIPSI PASSWORD SEBELUM SIMPAN
+        // Mengubah "rahasia123" menjadi "$2a$10$xd....."
         String hashedPassword = passwordEncoder.encode(admin.getPassword());
         admin.setPassword(hashedPassword);
 
         return adminRepository.save(admin);
     }
 
-    // UPDATE (Dengan Hashing, jika password diganti)
+    // ==========================================
+    // 3. UPDATE ADMIN (Edit admin dengan cek password)
+    // ==========================================
     @PutMapping("/update/{id}")
     public ResponseEntity<Admin> updateAdmin(@PathVariable String id, @RequestBody Admin adminDetails) {
         Admin admin = adminRepository.findById(id)
@@ -53,8 +62,8 @@ public class AdminController {
         admin.setUsername(adminDetails.getUsername());
         admin.setJabatan(adminDetails.getJabatan());
 
-        // Cek: User mau ganti password gak?
-        // Kalau field password di JSON tidak kosong, berarti dia mau ganti
+        // Cek: Apakah user mengirim password baru?
+        // Kalau field password di JSON tidak kosong, berarti dia mau ganti password
         if (adminDetails.getPassword() != null && !adminDetails.getPassword().isEmpty()) {
             String hashedPassword = passwordEncoder.encode(adminDetails.getPassword());
             admin.setPassword(hashedPassword);
@@ -63,10 +72,24 @@ public class AdminController {
         Admin updatedAdmin = adminRepository.save(admin);
         return ResponseEntity.ok(updatedAdmin);
     }
-    
-    // ... (kode DELETE tetap sama) ...
 
-    // LOGIN CHECK (Update Logic Verifikasi)
+    // ==========================================
+    // 4. DELETE ADMIN (Hapus admin)
+    // ==========================================
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Map<String, Boolean>> deleteAdmin(@PathVariable String id) {
+        Admin admin = adminRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Admin tidak ditemukan dengan id: " + id));
+
+        adminRepository.delete(admin);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("deleted", Boolean.TRUE);
+        return ResponseEntity.ok(response);
+    }
+
+    // ==========================================
+    // 5. LOGIN CHECK (Cek password hash)
+    // ==========================================
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> loginAdmin(@RequestBody Admin loginData) {
         Admin admin = adminRepository.findByUsername(loginData.getUsername())
@@ -74,8 +97,7 @@ public class AdminController {
 
         Map<String, Object> response = new HashMap<>();
         
-        // Verifikasi Password Hash
-        // passwordEncoder.matches(password_mentah, password_database_hash)
+        // Cek kecocokan password mentah (inputan user) dengan password hash (di database)
         if(passwordEncoder.matches(loginData.getPassword(), admin.getPassword())) {
             response.put("status", "success");
             response.put("message", "Login Berhasil");
