@@ -8,32 +8,54 @@ import java.math.BigDecimal;
 public class Menu {
 
     @Id
-    @Column(name = "id_menu")
-    private String idMenu; // Sesuai tipe varchar(10) di database Anda
+    @Column(name = "id_menu", length = 10)
+    private String idMenu;
 
-    @Column(name = "id_kategori")
-    private String idKategori;
-
-    @Column(name = "nama_menu")
+    @Column(name = "nama_menu", nullable = false)
     private String namaMenu;
 
+    @Column(name = "harga", nullable = false)
     private BigDecimal harga;
 
-    @Column(name = "status_menu")
-    private String statusMenu; // enum di database bisa dianggap String di Java sederhana
-
+    // --- TAMBAHAN BARU ---
+    @Column(name = "gambar")
     private String gambar;
+
+    @Column(name = "deskripsi", columnDefinition = "TEXT")
     private String deskripsi;
 
-    // Getter dan Setter (Wajib ada, bisa generate otomatis di IDE)
+    @Column(name = "id_kategori", nullable = false)
+    private String idKategori;
+
+    @Column(name = "status_menu", nullable = false)
+    private String statusMenu;
+    // ---------------------
+
+    // Constructor Kosong
+    public Menu() {}
+
+    // Constructor Lengkap (Update juga constructornya kalau mau, atau pakai Getter/Setter saja)
+
+    // GETTER & SETTER (Wajib Ditambah)
     public String getIdMenu() { return idMenu; }
     public void setIdMenu(String idMenu) { this.idMenu = idMenu; }
-    
+
     public String getNamaMenu() { return namaMenu; }
     public void setNamaMenu(String namaMenu) { this.namaMenu = namaMenu; }
 
     public BigDecimal getHarga() { return harga; }
     public void setHarga(BigDecimal harga) { this.harga = harga; }
 
-    // ... (Generate getter/setter untuk field lain jika perlu)
+    // Getter Setter Tambahan
+    public String getGambar() { return gambar; }
+    public void setGambar(String gambar) { this.gambar = gambar; }
+
+    public String getDeskripsi() { return deskripsi; }
+    public void setDeskripsi(String deskripsi) { this.deskripsi = deskripsi; }
+
+    public String getIdKategori() { return idKategori; }
+    public void setIdKategori(String idKategori) { this.idKategori = idKategori; }
+
+    public String getStatusMenu() { return statusMenu; }
+    public void setStatusMenu(String statusMenu) { this.statusMenu = statusMenu; }
 }
