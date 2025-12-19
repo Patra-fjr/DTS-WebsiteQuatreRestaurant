@@ -1,35 +1,40 @@
 <?php
 session_start();
-// Pastikan hanya admin yang login yang bisa mengakses file ini
+
+// 1. Proteksi Halaman (Satpam)
 if (!isset($_SESSION['login'])) {
     header("Location: ../login.php");
     exit;
 }
 
-require '../koneksi.php';
-
-// Ambil ID admin dari URL dan pastikan ID itu ada
+// 2. Cek apakah ada ID yang dikirim melalui URL
 if (isset($_GET['id'])) {
     $id_admin_to_delete = $_GET['id'];
     $id_admin_logged_in = $_SESSION['id_admin'];
 
-    // PENTING: Tambahkan pengecekan agar pengguna tidak bisa menghapus akunnya sendiri
+    // 3. Pengecekan agar tidak menghapus akun sendiri
     if ($id_admin_to_delete == $id_admin_logged_in) {
-        // Jika mencoba menghapus diri sendiri, kirim pesan error
         $_SESSION['pesan_error'] = "Anda tidak dapat menghapus akun Anda sendiri.";
     } else {
-        // Siapkan query DELETE yang aman
-        $sql = "DELETE FROM admin WHERE id_admin = ?";
-        $stmt = mysqli_prepare($koneksi, $sql);
-        mysqli_stmt_bind_param($stmt, "s", $id_admin_to_delete);
+        
+        // --- PROSES DELETE VIA API SPRING BOOT ---
+        
+        // Sesuaikan IP-nya dengan IP gateway yang berhasil kamu pakai sebelumnya
+        $url = "http://172.17.0.1:8080/api/admins/delete/" . $id_admin_to_delete;
 
-        // Eksekusi query
-        if (mysqli_stmt_execute($stmt)) {
-            // Jika berhasil, buat pesan sukses
-            $_SESSION['pesan_sukses'] = "Admin berhasil dihapus.";
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE"); // Menggunakan method DELETE
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Cek status code dari API (200 artinya OK/Berhasil)
+        if ($httpCode == 200) {
+            $_SESSION['pesan_sukses'] = "Admin berhasil dihapus";
         } else {
-            // Jika gagal, buat pesan error
-            $_SESSION['pesan_error'] = "Gagal menghapus admin.";
+            $_SESSION['pesan_error'] = "Gagal menghapus admin. Kode Error API: " . $httpCode;
         }
     }
 
@@ -38,8 +43,7 @@ if (isset($_GET['id'])) {
     exit();
 
 } else {
-    // Jika tidak ada ID di URL, langsung tendang kembali
+    // Jika tidak ada ID, kembali ke daftar
     header("Location: kelola_admin.php");
     exit();
 }
-?>
