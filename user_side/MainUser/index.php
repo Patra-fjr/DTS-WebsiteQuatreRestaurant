@@ -49,7 +49,22 @@
     $api_url = 'http://localhost:8080/api/menus';
     
     // Ambil data JSON dari Spring Boot
-    $json_data = @file_get_contents($api_url);
+    $json_data = file_get_contents($api_url);
+
+// --- DEBUGGING: Tampilkan pesan error jika gagal ---
+if ($json_data === false) {
+    echo "<div style='background:red; color:white; padding:10px;'>";
+    echo "<strong>ERROR PHP:</strong> Gagal mengambil data dari $api_url <br>";
+    echo "Cek error log di folder XAMPP/apache/logs/error.log atau pastikan config 'allow_url_fopen' di php.ini sudah ON.";
+    echo "</div>";
+    
+    // Cek detail error terakhir
+    print_r(error_get_last()); 
+    exit; // Stop loading biar kita fokus benerin ini dulu
+} else {
+    // Kalau berhasil ambil data, coba tampilkan mentahannya buat cek
+    // echo "<pre>Data JSON Masuk: " . htmlspecialchars(substr($json_data, 0, 500)) . "...</pre>";
+}
 
     if ($json_data !== false) {
         $menus_from_api = json_decode($json_data, true);
