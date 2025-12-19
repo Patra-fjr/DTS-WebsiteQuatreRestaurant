@@ -5,31 +5,36 @@ if (!isset($_SESSION['login'])) {
     exit;
 }
 
-require '../koneksi.php';
-
+// Gunakan IP gateway yang berhasil sebelumnya
+$api_url_base = "http://172.17.0.1:8080/api/admins"; 
 $error = '';
 
-// Ambil ID dari URL
+// 1. AMBIL DATA ADMIN DARI API (Untuk mengisi form otomatis)
 if (!isset($_GET['id'])) {
     header("Location: kelola_admin.php");
     exit;
 }
 $id_admin = $_GET['id'];
 
-// Ambil data admin yang akan diedit
-$sql_select = "SELECT * FROM admin WHERE id_admin = ?";
-$stmt_select = mysqli_prepare($koneksi, $sql_select);
-mysqli_stmt_bind_param($stmt_select, "s", $id_admin);
-mysqli_stmt_execute($stmt_select);
-$result = mysqli_stmt_get_result($stmt_select);
-$admin = mysqli_fetch_assoc($result);
+// Kita panggil API Get All lalu cari ID yang sesuai
+$json_data = @file_get_contents($api_url_base);
+$admins = json_decode($json_data, true);
+$admin = null;
 
-if (!$admin) {
-    header("Location: kelola_admin.php");
-    exit;
+if ($admins) {
+    foreach ($admins as $a) {
+        if ($a['idAdmin'] == $id_admin) {
+            $admin = $a;
+            break;
+        }
+    }
 }
 
-// Logika untuk UPDATE data
+if (!$admin) {
+    die("Admin tidak ditemukan di database API!");
+}
+
+// 2. LOGIKA UPDATE DATA VIA API (PUT)
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nama = $_POST['nama'];
     $email = $_POST['email'];
@@ -40,38 +45,50 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($nama) || empty($email) || empty($username) || empty($jabatan)) {
         $error = "Semua kolom kecuali password wajib diisi!";
     } else {
-        // Logika Update Password: HANYA jika kolom password diisi.
+        // Siapkan data untuk dikirim ke API
+        $data_update = [
+            "nama" => $nama,
+            "email" => $email,
+            "username" => $username,
+            "jabatan" => $jabatan
+        ];
+
+        // HANYA kirim password jika kolom diisi (Spring Boot akan otomatis hashing)
         if (!empty($password)) {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $sql_update = "UPDATE admin SET nama = ?, email = ?, username = ?, jabatan = ?, password = ? WHERE id_admin = ?";
-            $stmt_update = mysqli_prepare($koneksi, $sql_update);
-            mysqli_stmt_bind_param($stmt_update, "ssssss", $nama, $email, $username, $jabatan, $hashed_password, $id_admin);
-        } else {
-            // Jika password tidak diisi, jangan update kolom password
-            $sql_update = "UPDATE admin SET nama = ?, email = ?, username = ?, jabatan = ? WHERE id_admin = ?";
-            $stmt_update = mysqli_prepare($koneksi, $sql_update);
-            mysqli_stmt_bind_param($stmt_update, "sssss", $nama, $email, $username, $jabatan, $id_admin);
+            $data_update["password"] = $password;
         }
 
-        if (mysqli_stmt_execute($stmt_update)) {
+        // Tembak API dengan method PUT
+        $url_put = $api_url_base . "/update/" . $id_admin;
+        $ch = curl_init($url_put);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT"); 
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data_update));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode == 200) {
             $_SESSION['pesan_sukses'] = "Data admin berhasil diperbarui!";
             header("Location: kelola_admin.php");
             exit();
         } else {
-            $error = "Gagal memperbarui data. Mungkin username atau email sudah digunakan.";
+            $error = "Gagal memperbarui data. Mungkin server mati atau username sudah digunakan.";
         }
     }
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Admin</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <link rel="stylesheet" href="..admin_side/assets/style-dashboard.css">
+    <link rel="stylesheet" href="../assets/style-dashboard.css">
 </head>
 <body>
 
@@ -111,7 +128,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                     <div class="form-group">
                         <label>ID Admin</label>
-                        <input type="text" value="<?php echo htmlspecialchars($admin['id_admin']); ?>" readonly style="background:#ddd;">
+                        <input type="text" value="<?php echo htmlspecialchars($admin['idAdmin']); ?>" readonly style="background:#ddd;">
                     </div>
                     <div class="form-group">
                         <label for="nama">Nama Lengkap</label>
@@ -127,7 +144,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
                     <div class="form-group">
                         <label for="password">Password Baru</label>
-                        <input type="password" id="password" name="password" placeholder="Kosongkan jika tidak ingin diubah">
+                        <input type="text" id="password" name="password" placeholder="Kosongkan jika tidak ingin diubah">
                     </div>
                     <div class="form-group">
                         <label for="jabatan">Jabatan</label>
@@ -147,16 +164,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </main>
     </div>
     
-    <div class="popup-overlay" id="logout-popup">
-        <div class="popup-box">
-            <h2>Konfirmasi Logout</h2>
-            <p>Apakah Anda yakin ingin keluar?</p>
-            <div class="popup-buttons">
-                <button class="btn-cancel" id="cancel-logout-btn">Batal</button>
-                <a href="../logout.php" class="btn-confirm">Yakin</a>
-            </div>
-        </div>
-    </div>
     <script src="../assets/script-dashboard.js"></script>
 </body>
 </html>
