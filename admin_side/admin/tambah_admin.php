@@ -5,12 +5,11 @@ if (!isset($_SESSION['login'])) {
     exit;
 }
 
-require '../koneksi.php';
+// require '../koneksi.php'; // Sudah tidak perlu koneksi DB langsung
 
 $error = '';
 $sukses = '';
 
-// Cek apakah form sudah disubmit
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nama = $_POST['nama'];
     $email = $_POST['email'];
@@ -18,43 +17,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = $_POST['password'];
     $jabatan = $_POST['jabatan'];
 
-    // Validasi
+    // 1. Validasi Input Dasar
     if (empty($nama) || empty($email) || empty($username) || empty($password) || empty($jabatan)) {
         $error = "Semua kolom wajib diisi!";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Format email tidak valid!";
     } else {
-        // Cek apakah username atau email sudah ada
-        $sql_check = "SELECT id_admin FROM admin WHERE username = ? OR email = ?";
-        $stmt_check = mysqli_prepare($koneksi, $sql_check);
-        mysqli_stmt_bind_param($stmt_check, "ss", $username, $email);
-        mysqli_stmt_execute($stmt_check);
-        mysqli_stmt_store_result($stmt_check);
+        // 2. Siapkan Data untuk API
+        $data = [
+            "nama" => $nama,
+            "email" => $email,
+            "username" => $username,
+            "password" => $password, // Akan di-hash otomatis oleh Spring Boot
+            "jabatan" => $jabatan
+        ];
 
-        if (mysqli_stmt_num_rows($stmt_check) > 0) {
-            $error = "Username atau Email sudah terdaftar.";
+        // 3. Kirim ke API Spring Boot menggunakan cURL
+        // Gunakan IP gateway yang berhasil Anda pakai sebelumnya
+        $url = "http://172.17.0.1:8080/api/admins/add";
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // 4. Cek Respon API
+        if ($httpCode == 200 || $httpCode == 201) {
+            $sukses = "Admin baru berhasil ditambahkan melalui API!";
+            $_POST = array(); // Kosongkan form
         } else {
-            // Buat ID unik
-            $id_admin = "ad" . rand(100, 999);
-            // HASH PASSWORD! Paling penting.
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-            // Siapkan query INSERT yang aman
-            $sql_insert = "INSERT INTO admin (id_admin, nama, email, username, password, jabatan) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt_insert = mysqli_prepare($koneksi, $sql_insert);
-            mysqli_stmt_bind_param($stmt_insert, "ssssss", $id_admin, $nama, $email, $username, $hashed_password, $jabatan);
-
-            if (mysqli_stmt_execute($stmt_insert)) {
-                $sukses = "Admin baru berhasil ditambahkan!";
-                $_POST = array(); // Kosongkan form setelah berhasil
-            } else {
-                $error = "Gagal menambahkan admin: " . mysqli_error($koneksi);
-            }
+            // Jika gagal (misal username sudah ada), API biasanya melempar error
+            $error = "Gagal menambahkan admin. Periksa apakah Username sudah terdaftar di sistem.";
         }
-        mysqli_stmt_close($stmt_check);
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -65,7 +68,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="../assets/style-dashboard.css">
 </head>
 <body>
-
     <div class="sidebar">
         <div class="logo">
             <i class='bx bxs-store-alt'></i>
@@ -136,8 +138,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </main>
     </div>
     
-    <div class="popup-overlay" id="logout-popup">
-        </div>
     <script src="../assets/script-dashboard.js"></script>
 </body>
 </html>
