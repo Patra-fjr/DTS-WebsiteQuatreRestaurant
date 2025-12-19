@@ -116,37 +116,51 @@ require '../koneksi.php';
             </thead>
             <tbody>
                 <?php
-                    // Query untuk mengambil semua data admin
-                    $sql = "SELECT id_admin, nama, email, username, jabatan FROM admin ORDER BY nama ASC";
-                    $result = mysqli_query($koneksi, $sql);
+                    // --- KODE BARU: CONSUME API SPRING BOOT ---
+    
+                    // Gunakan IP gateway yang berhasil kamu gunakan di index user tadi
+                $api_url = 'http://172.17.0.1:8080/api/admins'; 
+    
+                // Ambil data JSON
+                $json_data = @file_get_contents($api_url);
 
-                    if (!$result) {
-                        die("Query Error: " . mysqli_error($koneksi));
-                    }
+                if ($json_data !== false) {
+                    $admins = json_decode($json_data, true);
 
-                    if (mysqli_num_rows($result) > 0) {
-                        while($admin = mysqli_fetch_assoc($result)) {
+                        if (!empty($admins)) {
+                        // Kita urutkan manual berdasarkan nama (karena di SQL ada ORDER BY nama ASC)
+                        usort($admins, function($a, $b) {
+                            return strcmp($a['nama'], $b['nama']);
+                         });
+
+                        foreach ($admins as $admin) {
                 ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($admin['id_admin']); ?></td>
+                                <td><?php echo htmlspecialchars($admin['idAdmin']); ?></td>
                                 <td><?php echo htmlspecialchars($admin['nama']); ?></td>
                                 <td><?php echo htmlspecialchars($admin['email']); ?></td>
                                 <td><?php echo htmlspecialchars($admin['username']); ?></td>
                                 <td><?php echo htmlspecialchars($admin['jabatan']); ?></td>
                                 <td>
-                                    <a href="edit_admin.php?id=<?php echo $admin['id_admin']; ?>" class="btn-edit">Edit</a>
-                                    <?php if ($admin['id_admin'] != $_SESSION['id_admin']): ?>
-                                        <a href="hapus_admin.php?id=<?php echo $admin['id_admin']; ?>" class="btn-delete" onclick="return confirm('Apakah Anda yakin ingin menghapus admin ini?');">Hapus</a>
+                                    <a href="edit_admin.php?id=<?php echo $admin['idAdmin']; ?>" class="btn-edit">Edit</a>
+                                    
+                                    <?php if ($admin['idAdmin'] != $_SESSION['id_admin']): ?>
+                                        <a href="hapus_admin.php?id=<?php echo $admin['idAdmin']; ?>" 
+                                        class="btn-delete" 
+                                        onclick="return confirm('Apakah Anda yakin ingin menghapus admin ini?');">Hapus</a>
                                     <?php endif; ?>
                                 </td>
                             </tr>
                 <?php
-                        }
-                    } else {
-                        echo "<tr><td colspan='6' style='text-align:center;'>Belum ada data admin.</td></tr>";
-                    }
-                ?>
-            </tbody>
+            }
+        } else {
+            echo "<tr><td colspan='6' style='text-align:center;'>Belum ada data admin di API.</td></tr>";
+        }
+    } else {
+        echo "<tr><td colspan='6' style='text-align:center; color:red;'>Gagal terhubung ke API Spring Boot. Pastikan server Backend menyala!</td></tr>";
+    }
+    ?>
+</tbody>
         </table>
     </div>
 </main>
