@@ -46,7 +46,7 @@
     // ==========================================
     
     // Alamat API Backend
-    $api_url = 'http://localhost:8080/api/menus';
+    $api_url = 'http://172.17.0.1:8080/api/menus';
     
     // Ambil data JSON dari Spring Boot
     $json_data = file_get_contents($api_url);
