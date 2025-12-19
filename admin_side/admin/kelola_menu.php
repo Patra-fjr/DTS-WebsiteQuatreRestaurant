@@ -5,12 +5,14 @@ if (!isset($_SESSION['login'])) {
     exit;
 }
 
-// Alamat API Spring Boot
+// 1. CONSUME API SPRING BOOT
+// Menggunakan IP gateway yang berhasil digunakan sebelumnya
 $api_url = 'http://172.17.0.1:8080/api/menus';
 $json_data = @file_get_contents($api_url);
 $menus = json_decode($json_data, true);
 
-// Mapping Kategori manual agar tampilan lebih manusiawi
+// 2. MAPPING KATEGORI
+// Karena API mengirim idKategori (kat001/kat002), kita buatkan mapping untuk menampilkan nama kategorinya
 $kategori_nama = [
     'kat001' => 'Makanan',
     'kat002' => 'Minuman'
@@ -22,7 +24,8 @@ $kategori_nama = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelola Menu</title> <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <title>Kelola Menu</title> 
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="../assets/style-dashboard.css">
 </head>
 <body>
@@ -80,7 +83,8 @@ $kategori_nama = [
 
     <div class="main-content">
         <header>
-            <h2>Kelola Menu</h2> <div class="user-wrapper">
+            <h2>Kelola Menu</h2> 
+            <div class="user-wrapper">
                 <i class='bx bxs-user-circle'></i>
                 <div>
                     <h4><?php echo htmlspecialchars($_SESSION['nama']); ?></h4>
@@ -91,7 +95,8 @@ $kategori_nama = [
 
         <main>
             <div class="header">
-                <h2>Daftar Menu</h2> <a href="tambah_menu.php" class="btn-add">
+                <h2>Daftar Menu</h2> 
+                <a href="tambah_menu.php" class="btn-add">
                     <i class='bx bx-plus'></i> Tambah Menu
                 </a>
             </div>
@@ -99,11 +104,11 @@ $kategori_nama = [
             <?php
             if (isset($_SESSION['pesan_sukses'])) {
                 echo "<p class='message sukses'>" . $_SESSION['pesan_sukses'] . "</p>";
-                unset($_SESSION['pesan_sukses']); // Hapus pesan setelah ditampilkan
+                unset($_SESSION['pesan_sukses']); 
             }
             if (isset($_SESSION['pesan_error'])) {
                 echo "<p class='message error'>" . $_SESSION['pesan_error'] . "</p>";
-                unset($_SESSION['pesan_error']); // Hapus pesan setelah ditampilkan
+                unset($_SESSION['pesan_error']); 
             }
             ?>
 
@@ -112,32 +117,28 @@ $kategori_nama = [
                     <thead>
                         <tr>
                             <th>ID Menu</th>
-                            <th>Gambar</th> <th>Nama Menu</th>
+                            <th>Gambar</th> 
+                            <th>Nama Menu</th>
                             <th>Kategori</th>
                             <th>Harga</th>
-                            <th>Deskripsi</th> <th>Status</th>
+                            <th>Deskripsi</th> 
+                            <th>Status</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        // Query untuk mengambil data menu beserta nama kategorinya
-                        // Query Anda sudah benar karena menggunakan menu.*
-                        $sql = "SELECT menu.*, kategori.nama_kategori
-                                FROM menu
-                                JOIN kategori ON menu.id_kategori = kategori.id_kategori
-                                ORDER BY menu.id_menu ASC";
-                        $result = mysqli_query($koneksi, $sql);
+                        // Cek apakah data dari API tersedia
+                        if ($json_data !== false && !empty($menus)) {
+                            // Mengurutkan data berdasarkan ID Menu secara ASC (sama seperti SQL ORDER BY)
+                            usort($menus, function($a, $b) {
+                                return strcmp($a['idMenu'], $b['idMenu']);
+                            });
 
-                        if (!$result) {
-                            die("Query Error: " . mysqli_error($koneksi));
-                        }
-
-                        if (mysqli_num_rows($result) > 0) {
-                            while($menu = mysqli_fetch_assoc($result)) {
+                            foreach($menus as $menu) {
                         ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($menu['id_menu']); ?></td>
+                                    <td><?php echo htmlspecialchars($menu['idMenu']); ?></td>
                                     <td>
                                         <?php if (!empty($menu['gambar'])): ?>
                                             <img src="../assets/image/<?php echo htmlspecialchars($menu['gambar']); ?>" alt="Gambar Menu" class="menu-table-img">
@@ -145,8 +146,8 @@ $kategori_nama = [
                                             <span>(No Image)</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?php echo htmlspecialchars($menu['nama_menu']); ?></td>
-                                    <td><?php echo htmlspecialchars($menu['nama_kategori']); ?></td>
+                                    <td><?php echo htmlspecialchars($menu['namaMenu']); ?></td>
+                                    <td><?php echo htmlspecialchars($kategori_nama[$menu['idKategori']] ?? 'Lainnya'); ?></td>
                                     <td>Rp <?php echo number_format($menu['harga'], 0, ',', '.'); ?></td>
                                     <td>
                                         <div class="menu-desc-short" title="<?php echo htmlspecialchars($menu['deskripsi']); ?>">
@@ -154,20 +155,19 @@ $kategori_nama = [
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="status <?php echo $menu['status_menu'] == 'tersedia' ? 'tersedia' : 'habis'; ?>">
-                                            <?php echo htmlspecialchars($menu['status_menu']); ?>
+                                        <span class="status <?php echo $menu['statusMenu'] == 'tersedia' ? 'tersedia' : 'habis'; ?>">
+                                            <?php echo htmlspecialchars($menu['statusMenu']); ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <a href="edit_menu.php?id=<?php echo $menu['id_menu']; ?>" class="btn-edit">Edit</a>
-                                        <a href="hapus_menu.php?id=<?php echo $menu['id_menu']; ?>" class="btn-delete" onclick="return confirm('Apakah Anda yakin ingin menghapus menu ini?');">Hapus</a>
+                                        <a href="edit_menu.php?id=<?php echo $menu['idMenu']; ?>" class="btn-edit">Edit</a>
+                                        <a href="hapus_menu.php?id=<?php echo $menu['idMenu']; ?>" class="btn-delete" onclick="return confirm('Apakah Anda yakin ingin menghapus menu ini?');">Hapus</a>
                                     </td>
                                 </tr>
                         <?php
                             }
                         } else {
-                            // Jika tidak ada data, tampilkan pesan
-                            echo "<tr><td colspan='8' style='text-align:center;'>Belum ada data menu.</td></tr>"; // DIUBAH: colspan jadi 8
+                            echo "<tr><td colspan='8' style='text-align:center;'>Belum ada data menu atau server API mati.</td></tr>";
                         }
                         ?>
                     </tbody>
