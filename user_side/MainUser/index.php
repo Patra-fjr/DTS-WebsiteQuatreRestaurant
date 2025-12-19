@@ -87,9 +87,9 @@ if ($json_data === false) {
                 // Gambar Handling
                 $gambar_nama = $row['gambar'] ?? null;
                 if ($gambar_nama) {
-                    $gambar_path = 'http://localhost:85/Website-Quatre-Restaurant/admin_side/assets/image/' . htmlspecialchars($gambar_nama);
+                    $gambar_path = 'http://localhost:85/admin_side/assets/image/' . htmlspecialchars($gambar_nama);
                 } else {
-                    $gambar_path = 'http://localhost:85/Website-Quatre-Restaurant/admin_side/assets/image/placeholder.jpg';
+                    $gambar_path = 'http://localhost:85/admin_side/assets/image/placeholder.jpg';
                 }
 
                 // Tentukan Nama Kategori dari ID
