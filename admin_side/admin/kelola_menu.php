@@ -1,13 +1,22 @@
 <?php
-// Langkah 1: Mulai session dan pasang "satpam"
 session_start();
 if (!isset($_SESSION['login'])) {
     header("Location: ../login.php");
     exit;
 }
 
-require '../koneksi.php';
+// Alamat API Spring Boot
+$api_url = 'http://172.17.0.1:8080/api/menus';
+$json_data = @file_get_contents($api_url);
+$menus = json_decode($json_data, true);
+
+// Mapping Kategori manual agar tampilan lebih manusiawi
+$kategori_nama = [
+    'kat001' => 'Makanan',
+    'kat002' => 'Minuman'
+];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
