@@ -76,15 +76,26 @@ public class AdminController {
     // ==========================================
     // 4. DELETE ADMIN (Hapus admin)
     // ==========================================
+    // Ubah method DELETE menjadi SOFT DELETE
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<Map<String, Boolean>> deleteAdmin(@PathVariable String id) {
-        Admin admin = adminRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Admin tidak ditemukan dengan id: " + id));
+    public ResponseEntity<?> deleteAdmin(@PathVariable String id) {
+        try {
+            Admin admin = adminRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Admin tidak ditemukan"));
+        
+        // Cek jika admin mencoba menghapus dirinya sendiri (Logic tambahan opsional)
+        // ...
 
-        adminRepository.delete(admin);
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("deleted", Boolean.TRUE);
-        return ResponseEntity.ok(response);
+        // Lakukan Soft Delete
+            admin.setStatusAdmin("dihapus"); 
+            adminRepository.save(admin); // Simpan perubahan status
+        
+            Map<String, Boolean> response = new HashMap<>();
+            response.put("deleted", Boolean.TRUE);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Gagal menghapus admin: " + e.getMessage());
+        }
     }
 
     // ==========================================

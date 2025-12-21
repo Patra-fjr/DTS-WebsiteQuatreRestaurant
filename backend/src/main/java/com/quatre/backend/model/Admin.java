@@ -25,18 +25,22 @@ public class Admin {
     @Column(name = "jabatan", nullable = false, length = 50)
     private String jabatan;
 
+    @Column(name = "status_admin", nullable = false, length = 50)
+    private String statusAdmin = "aktif";
+
     // Constructor Kosong (Wajib)
     public Admin() {
     }
 
     // Constructor Lengkap
-    public Admin(String idAdmin, String nama, String email, String username, String password, String jabatan) {
+    public Admin(String idAdmin, String nama, String email, String username, String password, String jabatan, String statusAdmin) {
         this.idAdmin = idAdmin;
         this.nama = nama;
         this.email = email;
         this.username = username;
         this.password = password;
         this.jabatan = jabatan;
+        this.statusAdmin = statusAdmin;
     }
 
     // Getter dan Setter
@@ -57,4 +61,8 @@ public class Admin {
 
     public String getJabatan() { return jabatan; }
     public void setJabatan(String jabatan) { this.jabatan = jabatan; }
+
+    public String getStatusAdmin () { return statusAdmin; }
+    public void setStatusAdmin (String statusAdmin) {this.statusAdmin = statusAdmin; }
+    
 }
