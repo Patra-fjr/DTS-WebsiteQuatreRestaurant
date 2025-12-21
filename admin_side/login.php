@@ -1,25 +1,28 @@
 <?php
 // Mulai session di baris paling atas, wajib!
 session_start();
-require 'koneksi.php';
 
+// HAPUS KONEKSI DATABASE LAMA
+// require 'koneksi.php'; 
 
-//buat login guys
-//admin harus login dulu
-
-// Inisialisasi variabel untuk menampung pesan
+// Inisialisasi variabel pesan
 $error_login = '';
 $error_register = '';
 $sukses = '';
 
-// Cek apakah ada pesan sukses dari proses registrasi
+// Cek pesan sukses dari redirect sebelumnya
 if (isset($_SESSION['pesan_sukses'])) {
     $sukses = $_SESSION['pesan_sukses'];
-    unset($_SESSION['pesan_sukses']); // Hapus pesan agar tidak muncul lagi
+    unset($_SESSION['pesan_sukses']);
 }
 
+// Konfigurasi IP Backend (Sesuaikan jika pakai Docker/Localhost)
+// Jika PHP di XAMPP & Java di VSCode -> "http://localhost:8080"
+// Jika di dalam Docker -> "http://172.17.0.1:8080"
+$api_base_url = "http://172.17.0.1:8080/api/admins";
+
 // ===============================================
-// PROSES LOGIN (JIKA TOMBOL LOGIN DITEKAN)
+// PROSES LOGIN (VIA API SPRING BOOT)
 // ===============================================
 if (isset($_POST['login_btn'])) {
     $username = $_POST['username'];
@@ -28,42 +31,58 @@ if (isset($_POST['login_btn'])) {
     if (empty($username) || empty($password)) {
         $error_login = "Username dan password wajib diisi!";
     } else {
-        $sql = "SELECT id_admin, username, password, nama, jabatan FROM admin WHERE username = ?";
-        $stmt = mysqli_prepare($koneksi, $sql);
-        mysqli_stmt_bind_param($stmt, "s", $username);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
+        // 1. Siapkan Data Login
+        $data_login = [
+            "username" => $username,
+            "password" => $password
+        ];
 
-        if ($user = mysqli_fetch_assoc($result)) {
-            // Verifikasi password yang di-hash
-            if (password_verify($password, $user['password'])) {
-                // Login berhasil, simpan data ke session
-                $_SESSION['login'] = true;
-                $_SESSION['id_admin'] = $user['id_admin'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['nama'] = $user['nama'];
-                $_SESSION['jabatan'] = $user['jabatan'];
+        // 2. Kirim Request ke API Login
+        $ch = curl_init($api_base_url . "/login");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data_login));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-                // Alihkan ke halaman dashboard
-                header("Location: admin/dashboard.php");
-                exit();
-            } else {
-                $error_login = "Username atau password salah.";
-            }
-        } else {
+        $result = json_decode($response, true);
+
+        // 3. Cek Hasil Login
+        if ($httpCode == 200 && isset($result['token'])) {
+            // LOGIN SUKSES!
+            $_SESSION['login'] = true;
+            
+            // --- SIMPAN TOKEN JWT (Sangat Penting!) ---
+            $_SESSION['jwt_token'] = $result['token']; 
+            
+            // Simpan data user ke session
+            $_SESSION['id_admin'] = $result['data']['idAdmin'];
+            $_SESSION['username'] = $result['data']['username'];
+            $_SESSION['nama']     = $result['data']['nama'];
+            $_SESSION['jabatan']  = $result['data']['jabatan'];
+
+            // Redirect ke Dashboard
+            header("Location: admin/dashboard.php");
+            exit();
+        } elseif ($httpCode == 401) {
             $error_login = "Username atau password salah.";
+        } else {
+            $error_login = "Gagal login. Server Backend mungkin mati.";
         }
     }
 }
 
 // ===============================================
-// PROSES REGISTRASI (JIKA TOMBOL REGISTER DITEKAN)
+// PROSES REGISTRASI (VIA API SPRING BOOT)
 // ===============================================
 if (isset($_POST['register_btn'])) {
     $nama = $_POST['nama_lengkap'];
     $email = $_POST['email'];
     $username = $_POST['username'];
-    $password = $_POST['password'];
+    $password = $_POST['password']; // Kirim raw, Java yang akan hash
     $jabatan = $_POST['jabatan'];
 
     if (empty($nama) || empty($email) || empty($username) || empty($password) || empty($jabatan)) {
@@ -71,42 +90,49 @@ if (isset($_POST['register_btn'])) {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_register = "Format email tidak valid!";
     } else {
-        $sql_check = "SELECT id_admin FROM admin WHERE username = ? OR email = ?";
-        $stmt_check = mysqli_prepare($koneksi, $sql_check);
-        mysqli_stmt_bind_param($stmt_check, "ss", $username, $email);
-        mysqli_stmt_execute($stmt_check);
-        mysqli_stmt_store_result($stmt_check);
+        // 1. Siapkan Data Registrasi
+        // Perhatikan key array harus sama dengan field di Admin.java
+        $data_reg = [
+            "nama" => $nama,
+            "email" => $email,
+            "username" => $username,
+            "password" => $password, 
+            "jabatan" => $jabatan,
+            "statusAdmin" => "aktif"
+        ];
 
-        if (mysqli_stmt_num_rows($stmt_check) > 0) {
-            $error_register = "Username atau Email sudah terdaftar.";
+        // 2. Kirim Request ke API Add Admin
+        // Catatan: Pastikan endpoint /add di SecurityConfig.java diizinkan (permitAll) 
+        // atau kamu login dulu baru bisa add. Jika ini registrasi publik, /add harus permitAll.
+        $ch = curl_init($api_base_url . "/add");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data_reg));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // 3. Cek Hasil Registrasi
+        if ($httpCode == 200 || $httpCode == 201) {
+            $_SESSION['pesan_sukses'] = "Registrasi berhasil! Silakan login.";
+            header("Location: login.php"); // Refresh halaman
+            exit();
         } else {
-            $id_admin = "ad" . rand(100, 999);
-            // HASH PASSWORD! Paling penting.
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-            $sql_insert = "INSERT INTO admin (id_admin, nama, email, username, password, jabatan) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt_insert = mysqli_prepare($koneksi, $sql_insert);
-            mysqli_stmt_bind_param($stmt_insert, "ssssss", $id_admin, $nama, $email, $username, $hashed_password, $jabatan);
-
-            if (mysqli_stmt_execute($stmt_insert)) {
-                // Kirim pesan sukses ke halaman ini via session
-                $_SESSION['pesan_sukses'] = "Registrasi berhasil! Silakan login.";
-                header("Location: login.php");
-                exit();
-            } else {
-                $error_register = "Registrasi gagal, silakan coba lagi.";
-            }
+            // Jika gagal (misal username duplicate), API Java biasanya return 500/400
+            $error_register = "Registrasi gagal. Username/Email mungkin sudah dipakai.";
         }
-        mysqli_stmt_close($stmt_check);
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In</title>
+    <title>Sign In - Admin Resto</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="assets/style-login.css">
 </head>
@@ -117,8 +143,8 @@ if (isset($_POST['register_btn'])) {
         <form action="login.php" method="POST">
             <h1>Sign In</h1>
 
-            <?php if (!empty($error_login)) echo "<p style='color:red; text-align:center;'>$error_login</p>"; ?>
-            <?php if (!empty($sukses)) echo "<p style='color:green; text-align:center;'>$sukses</p>"; ?>
+            <?php if (!empty($error_login)) echo "<p style='color:red; text-align:center; font-size:14px;'>$error_login</p>"; ?>
+            <?php if (!empty($sukses)) echo "<p style='color:green; text-align:center; font-size:14px;'>$sukses</p>"; ?>
 
             <div class="input-box">
                 <input type="text" name="username" placeholder="Username" required>
@@ -139,7 +165,7 @@ if (isset($_POST['register_btn'])) {
         <form action="login.php" method="POST">
             <h1>Registration</h1>
 
-            <?php if (!empty($error_register)) echo "<p style='color:red; text-align:center;'>$error_register</p>"; ?>
+            <?php if (!empty($error_register)) echo "<p style='color:red; text-align:center; font-size:14px;'>$error_register</p>"; ?>
 
             <div class="input-box">
                 <input type="text" name="nama_lengkap" placeholder="Nama Lengkap" required>
@@ -150,7 +176,7 @@ if (isset($_POST['register_btn'])) {
                 <i class='bx bxs-envelope'></i>
             </div>
               <div class="input-box">
-                <input type="text" name="jabatan" placeholder="Jabatan" required>
+                <input type="text" name="jabatan" placeholder="Jabatan (Owner/Staff)" required>
               <i class='bx bxs-briefcase-alt-2'></i>  
             </div>
             <div class="input-box">
