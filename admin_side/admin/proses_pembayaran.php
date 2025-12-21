@@ -55,7 +55,7 @@ if (!$order_data) {
 }
 
 // --- 2. Siapkan Data Transaksi ---
-$id_transaksi = "tr" . rand(100, 999) . time(); // Gunakan time() untuk menjamin keunikan
+$id_transaksi = "tr" . rand(10000000, 99999999); 
 $tanggal_sekarang = date("Y-m-d");
 $waktu_sekarang = date("H:i:s");
 $status_pembayaran = 'Selesai';
