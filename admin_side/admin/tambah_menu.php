@@ -5,80 +5,74 @@ if (!isset($_SESSION['login'])) {
     exit;
 }
 
-require '../koneksi.php'; // Menggunakan $koneksi
+// 1. Ambil data kategori via API untuk dropdown
+$api_url_menus = 'http://172.17.0.1:8080/api/menus';
+$kategori_nama = [
+    'kat001' => 'Makanan',
+    'kat002' => 'Minuman'
+];
 
 $error = '';
 $sukses = '';
 
-// Ambil data kategori untuk dropdown
-$kategori_result = mysqli_query($koneksi, "SELECT * FROM kategori WHERE status_kategori = 'tersedia'");
-
-// Cek apakah form sudah disubmit
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $id_menu = $_POST['id_menu'];
     $nama_menu = $_POST['nama_menu'];
     $id_kategori = $_POST['id_kategori'];
     $harga = $_POST['harga'];
     $status_menu = $_POST['status_menu'];
-    $deskripsi = $_POST['deskripsi']; // Ambil deskripsi
+    $deskripsi = $_POST['deskripsi'];
+    $nama_gambar = NULL;
 
-    // Variabel untuk nama file gambar
-    $nama_gambar = NULL; // Default NULL jika tidak ada gambar
-
-    // --- LOGIKA UPLOAD GAMBAR BARU ---
-    // Cek apakah ada file gambar yang di-upload dan tidak ada error
+    // --- 2. LOGIKA UPLOAD GAMBAR LOKAL ---
     if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] == 0 && !empty($_FILES['gambar']['name'])) {
-        // Path dari folder 'admin' naik 1 level, lalu masuk ke 'assets/image/'
         $target_dir = "../assets/image/"; 
-        
-        // Buat nama file unik (prefix unik + nama asli)
         $nama_gambar = uniqid() . '-' . basename($_FILES["gambar"]["name"]);
         $target_file = $target_dir . $nama_gambar;
-        
-        // Cek tipe file
         $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+
         if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg") {
             $error = "Maaf, hanya file JPG, JPEG, & PNG yang diizinkan.";
         } else {
-            // Pindahkan file
             if (!move_uploaded_file($_FILES["gambar"]["tmp_name"], $target_file)) {
-                $error = "Maaf, terjadi kesalahan saat meng-upload file gambar.";
-                $nama_gambar = NULL; // Kembalikan ke NULL jika upload gagal
+                $error = "Gagal meng-upload gambar ke folder assets.";
             }
         }
     }
-    // --- AKHIR LOGIKA UPLOAD ---
 
-    if (empty($error) && (empty($id_menu) || empty($nama_menu) || empty($id_kategori) || empty($harga) || empty($status_menu))) {
-        $error = "Kolom ID Menu, Nama, Kategori, Harga, dan Status wajib diisi!";
-    } elseif (empty($error)) {
-        // Cek ID Menu
-        $sql_check = "SELECT id_menu FROM menu WHERE id_menu = ?";
-        $stmt_check = mysqli_prepare($koneksi, $sql_check);
-        mysqli_stmt_bind_param($stmt_check, "s", $id_menu);
-        mysqli_stmt_execute($stmt_check);
-        mysqli_stmt_store_result($stmt_check);
+    if (empty($error)) {
+        // --- 3. KIRIM DATA KE API SPRING BOOT ---
+        $data_api = [
+            "idMenu" => $id_menu,
+            "namaMenu" => $nama_menu,
+            "idKategori" => $id_kategori,
+            "harga" => (int)$harga,
+            "statusMenu" => $status_menu,
+            "deskripsi" => $deskripsi,
+            "gambar" => $nama_gambar
+        ];
 
-        if (mysqli_stmt_num_rows($stmt_check) > 0) {
-            $error = "ID Menu sudah digunakan, harap gunakan ID lain.";
+        $url_add = "http://172.17.0.1:8080/api/menus/add";
+        $ch = curl_init($url_add);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data_api));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode == 200 || $httpCode == 201) {
+            $sukses = "Menu baru berhasil ditambahkan via API!";
+            $_POST = array(); 
         } else {
-            // Query diubah untuk memasukkan 'deskripsi' dan 'gambar'
-            $sql_insert = "INSERT INTO menu (id_menu, id_kategori, nama_menu, harga, status_menu, deskripsi, gambar) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $stmt_insert = mysqli_prepare($koneksi, $sql_insert);
-            // Tipe data bind_param diubah (sssisss)
-            mysqli_stmt_bind_param($stmt_insert, "sssisss", $id_menu, $id_kategori, $nama_menu, $harga, $status_menu, $deskripsi, $nama_gambar);
-
-            if (mysqli_stmt_execute($stmt_insert)) {
-                $sukses = "Menu baru berhasil ditambahkan!";
-                $_POST = array(); // Kosongkan form setelah berhasil
-            } else {
-                $error = "Gagal menambahkan menu: " . mysqli_error($koneksi);
-            }
+            $error = "Gagal menambahkan menu ke API. (Error Code: $httpCode)";
         }
-        mysqli_stmt_close($stmt_check);
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -137,16 +131,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <label for="id_kategori">Kategori</label>
                         <select id="id_kategori" name="id_kategori" required>
                             <option value="" disabled selected>-- Pilih Kategori --</option>
-                            <?php
-                            // Reset pointer result set kategori
-                            mysqli_data_seek($kategori_result, 0); 
-                            if (mysqli_num_rows($kategori_result) > 0) {
-                                while($kategori = mysqli_fetch_assoc($kategori_result)) {
-                                    $selected = (isset($_POST['id_kategori']) && $_POST['id_kategori'] == $kategori['id_kategori']) ? 'selected' : '';
-                                    echo "<option value='" . $kategori['id_kategori'] . "' $selected>" . htmlspecialchars($kategori['nama_kategori']) . "</option>";
-                                }
-                            }
-                            ?>
+                            <option value="kat001" <?php echo (isset($_POST['id_kategori']) && $_POST['id_kategori'] == 'kat001') ? 'selected' : ''; ?>>Makanan</option>
+                            <option value="kat002" <?php echo (isset($_POST['id_kategori']) && $_POST['id_kategori'] == 'kat002') ? 'selected' : ''; ?>>Minuman</option>
                         </select>
                     </div>
                     <div class="form-group">
