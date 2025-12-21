@@ -17,18 +17,26 @@ public class MyUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // 1. Cari admin di database kamu
+        // 1. Cari admin di database
         Admin admin = adminRepository.findByUsername(username);
         
+        // 2. Cek apakah user ada?
         if (admin == null) {
             throw new UsernameNotFoundException("User tidak ditemukan: " + username);
         }
 
-        // 2. Return object User milik Spring Security (bukan Admin model kamu)
+        // --- 3. FILTER SOFT DELETE (PENTING!) ---
+        // Jika status admin adalah 'dihapus', kita tolak loginnya
+        // Kita pakai equalsIgnoreCase biar aman (Dihapus/dihapus sama saja)
+        if ("dihapus".equalsIgnoreCase(admin.getStatusAdmin())) {
+            throw new UsernameNotFoundException("Akun ini sudah dinonaktifkan/dihapus.");
+        }
+
+        // 4. Return object User jika aman
         return User.builder()
                 .username(admin.getUsername())
-                .password(admin.getPassword()) // Password harus sudah ter-hash BCrypt di DB
-                .roles(admin.getJabatan()) // Jabatan jadi Role
+                .password(admin.getPassword()) 
+                .roles(admin.getJabatan()) 
                 .build();
     }
 }
