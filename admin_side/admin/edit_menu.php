@@ -16,8 +16,20 @@ if (!isset($_GET['id'])) {
 }
 $id_menu = $_GET['id'];
 
-// 2. AMBIL DATA MENU LAMA DARI API (GET BY ID)
-$json_all = @file_get_contents($api_url_base);
+// 2. AMBIL TOKEN & DATA MENU LAMA DARI API
+$token = $_SESSION['jwt_token'] ?? '';
+
+// Context Header untuk GET
+$opts = [
+    "http" => [
+        "method" => "GET",
+        "header" => "Authorization: Bearer " . $token . "\r\n" .
+                    "Content-Type: application/json"
+    ]
+];
+$context = stream_context_create($opts);
+
+$json_all = @file_get_contents($api_url_base, false, $context);
 $all_menus = json_decode($json_all, true);
 $menu = null;
 
@@ -31,6 +43,7 @@ if ($all_menus) {
 }
 
 if (!$menu) {
+    // Jika tidak ketemu atau token expired
     header("Location: kelola_menu.php");
     exit;
 }
@@ -47,9 +60,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nama_gambar_lama = $_POST['gambar_lama'];
     $nama_gambar_baru = $nama_gambar_lama; 
 
-    // Cek apakah ada file gambar baru yang di-upload
+    // Cek upload gambar baru
     if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] == 0 && !empty($_FILES['gambar']['name'])) {
-        $target_dir = "../assets/image/";
+        $target_dir = __DIR__ . "/../assets/image/";
         $nama_gambar_baru = uniqid() . '-' . basename($_FILES["gambar"]["name"]);
         $target_file = $target_dir . $nama_gambar_baru;
         
@@ -58,7 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $error = "Hanya file JPG, JPEG, & PNG yang diizinkan.";
         } else {
             if (move_uploaded_file($_FILES["gambar"]["tmp_name"], $target_file)) {
-                // Hapus file fisik lama jika ada (agar folder image tidak penuh)
+                // Hapus file lama jika sukses
                 if (!empty($nama_gambar_lama) && $nama_gambar_lama != 'placeholder.jpg') {
                     if (file_exists($target_dir . $nama_gambar_lama)) {
                         unlink($target_dir . $nama_gambar_lama);
@@ -85,9 +98,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $url_put = $api_url_base . "/update/" . $id_menu;
         $ch = curl_init($url_put);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT"); // Method PUT untuk update data
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT"); 
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data_update));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        
+        // --- HEADER AUTHORIZATION ---
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $token
+        ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -97,6 +115,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['pesan_sukses'] = "Data menu berhasil diperbarui via API!";
             header("Location: kelola_menu.php");
             exit();
+        } elseif ($httpCode == 401 || $httpCode == 403) {
+            $error = "Gagal Update: Token tidak valid atau sesi habis.";
         } else {
             $error = "Gagal memperbarui menu di API. (Error Code: $httpCode)";
         }

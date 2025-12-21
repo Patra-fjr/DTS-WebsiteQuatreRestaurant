@@ -5,19 +5,30 @@ if (!isset($_SESSION['login'])) {
     exit;
 }
 
-// Gunakan IP gateway yang berhasil sebelumnya
 $api_url_base = "http://172.17.0.1:8080/api/admins"; 
 $error = '';
 
-// 1. AMBIL DATA ADMIN DARI API (Untuk mengisi form otomatis)
 if (!isset($_GET['id'])) {
     header("Location: kelola_admin.php");
     exit;
 }
 $id_admin = $_GET['id'];
 
-// Kita panggil API Get All lalu cari ID yang sesuai
-$json_data = @file_get_contents($api_url_base);
+// 1. AMBIL DATA ADMIN DARI API (GET BY ID)
+// Kita perlu kirim Token saat GET juga
+$token = $_SESSION['jwt_token'] ?? '';
+
+$opts = [
+    "http" => [
+        "method" => "GET",
+        "header" => "Authorization: Bearer " . $token . "\r\n" .
+                    "Content-Type: application/json"
+    ]
+];
+$context = stream_context_create($opts);
+
+// Ambil semua data lalu filter ID (Sesuai logic awal Anda)
+$json_data = @file_get_contents($api_url_base, false, $context);
 $admins = json_decode($json_data, true);
 $admin = null;
 
@@ -31,7 +42,9 @@ if ($admins) {
 }
 
 if (!$admin) {
-    die("Admin tidak ditemukan di database API!");
+    // Jika admin tidak ketemu atau token expired/salah
+    header("Location: kelola_admin.php"); 
+    exit;
 }
 
 // 2. LOGIKA UPDATE DATA VIA API (PUT)
@@ -53,18 +66,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             "jabatan" => $jabatan
         ];
 
-        // HANYA kirim password jika kolom diisi (Spring Boot akan otomatis hashing)
         if (!empty($password)) {
             $data_update["password"] = $password;
         }
 
         // Tembak API dengan method PUT
         $url_put = $api_url_base . "/update/" . $id_admin;
+        
         $ch = curl_init($url_put);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT"); 
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data_update));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        
+        // --- HEADER AUTHORIZATION ---
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $token
+        ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -74,8 +92,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['pesan_sukses'] = "Data admin berhasil diperbarui!";
             header("Location: kelola_admin.php");
             exit();
+        } elseif ($httpCode == 401 || $httpCode == 403) {
+            $error = "Gagal Update: Token tidak valid/kadaluarsa.";
         } else {
-            $error = "Gagal memperbarui data. Mungkin server mati atau username sudah digunakan.";
+            $error = "Gagal memperbarui data. (Error Code: $httpCode)";
         }
     }
 }

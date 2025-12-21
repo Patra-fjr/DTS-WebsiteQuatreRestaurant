@@ -5,18 +5,31 @@ if (!isset($_SESSION['login'])) {
     exit;
 }
 
-// 1. CONSUME API SPRING BOOT
-// Menggunakan IP gateway yang berhasil digunakan sebelumnya
-$api_url = 'http://172.17.0.1:8080/api/menus';
-$json_data = @file_get_contents($api_url);
-$menus = json_decode($json_data, true);
-
-// 2. MAPPING KATEGORI
-// Karena API mengirim idKategori (kat001/kat002), kita buatkan mapping untuk menampilkan nama kategorinya
+// 1. KATEGORI MAPPING (Statis)
 $kategori_nama = [
     'kat001' => 'Makanan',
     'kat002' => 'Minuman'
 ];
+
+// 2. CONSUME API SPRING BOOT DENGAN JWT
+$api_url = 'http://172.17.0.1:8080/api/menus'; 
+
+// Ambil Token dari Session
+$token = $_SESSION['jwt_token'] ?? '';
+
+// Siapkan Context Header (Authorization)
+$opts = [
+    "http" => [
+        "method" => "GET",
+        "header" => "Authorization: Bearer " . $token . "\r\n" .
+                    "Content-Type: application/json"
+    ]
+];
+$context = stream_context_create($opts);
+
+// Ambil data dengan context
+$json_data = @file_get_contents($api_url, false, $context);
+$menus = json_decode($json_data, true);
 ?>
 
 <!DOCTYPE html>
@@ -36,48 +49,13 @@ $kategori_nama = [
             <span>Admin Resto</span>
         </div>
         <ul class="nav-links">
-            <li> 
-                <a href="dashboard.php">
-                    <i class='bx bxs-dashboard'></i>
-                    <span class="link-name">Dashboard</span>
-                </a>
-            </li>
-            <li class="active">
-                <a href="kelola_menu.php">
-                    <i class='bx bxs-food-menu'></i>
-                    <span class="link-name">Kelola Menu</span>
-                </a>
-            </li>
-            <li>
-                <a href="kelola_ketersediaan.php">
-                    <i class='bx bxs-fridge'></i>
-                    <span class="link-name">Ketersediaan Menu</span>
-                </a>
-            </li>
-            <li>
-                <a href="kelola_pesanan.php">
-                    <i class='bx bxs-receipt'></i>
-                    <span class="link-name">Pesanan</span>
-                </a>
-            </li>
-            <li>
-                <a href="laporan.php">
-                    <i class='bx bxs-bar-chart-alt-2'></i>
-                    <span class="link-name">Laporan</span>
-                </a>
-            </li>
-            <li>
-                <a href="kelola_admin.php">
-                    <i class='bx bxs-group'></i>
-                    <span class="link-name">Kelola Admin</span>
-                </a>
-            </li>
-            <li class="logout">
-                <a href="#" id="logout-btn">
-                    <i class='bx bxs-log-out'></i>
-                    <span class="link-name">Logout</span>
-                </a>
-            </li>
+            <li><a href="dashboard.php"><i class='bx bxs-dashboard'></i><span class="link-name">Dashboard</span></a></li>
+            <li class="active"><a href="kelola_menu.php"><i class='bx bxs-food-menu'></i><span class="link-name">Kelola Menu</span></a></li>
+            <li><a href="kelola_ketersediaan.php"><i class='bx bxs-fridge'></i><span class="link-name">Ketersediaan</span></a></li>
+            <li><a href="kelola_pesanan.php"><i class='bx bxs-receipt'></i><span class="link-name">Pesanan</span></a></li>
+            <li><a href="laporan.php"><i class='bx bxs-bar-chart-alt-2'></i><span class="link-name">Laporan</span></a></li>
+            <li><a href="kelola_admin.php"><i class='bx bxs-group'></i><span class="link-name">Kelola Admin</span></a></li>
+            <li class="logout"><a href="#" id="logout-btn"><i class='bx bxs-log-out'></i><span class="link-name">Logout</span></a></li>
         </ul>
     </div>
 
@@ -128,16 +106,14 @@ $kategori_nama = [
                     </thead>
                     <tbody>
                         <?php
-                        // Cek apakah data dari API tersedia
                         if ($json_data !== false && !empty($menus)) {
-                            // Mengurutkan data berdasarkan ID Menu secara ASC
+                            // Sort by ID
                             usort($menus, function($a, $b) {
                                 return strcmp($a['idMenu'], $b['idMenu']);
                             });
 
                             foreach($menus as $menu) {
                                 // --- LOGIKA SOFT DELETE ---
-                                // Jika status menu adalah 'dihapus', maka baris ini dilewati (tidak ditampilkan)
                                 if (isset($menu['statusMenu']) && $menu['statusMenu'] == 'dihapus') {
                                     continue;
                                 }
@@ -172,7 +148,8 @@ $kategori_nama = [
                         <?php
                             }
                         } else {
-                            echo "<tr><td colspan='8' style='text-align:center;'>Belum ada data menu atau server API mati.</td></tr>";
+                            // Jika $json_data false atau kosong, kemungkinan server mati atau token expired
+                            echo "<tr><td colspan='8' style='text-align:center;'>Gagal memuat data menu. Token JWT mungkin kadaluarsa atau Server mati.</td></tr>";
                         }
                         ?>
                     </tbody>

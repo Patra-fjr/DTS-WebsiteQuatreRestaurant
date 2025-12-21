@@ -17,22 +17,33 @@ if (isset($_GET['id'])) {
         $_SESSION['pesan_error'] = "Anda tidak dapat menghapus akun Anda sendiri.";
     } else {
         
-        // --- PROSES DELETE VIA API SPRING BOOT ---
+        // --- PROSES DELETE VIA API SPRING BOOT DENGAN JWT ---
         
-        // Sesuaikan IP-nya dengan IP gateway yang berhasil kamu pakai sebelumnya
+        // Ambil token dari session
+        $token = $_SESSION['jwt_token'] ?? '';
+
+        // Sesuaikan IP-nya dengan IP gateway docker/backend kamu
         $url = "http://172.17.0.1:8080/api/admins/delete/" . $id_admin_to_delete;
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE"); // Menggunakan method DELETE
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         
+        // --- TAMBAHKAN HEADER AUTHORIZATION ---
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $token // Token dikirim di sini
+        ]);
+        
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        // Cek status code dari API (200 artinya OK/Berhasil)
+        // Cek status code dari API
         if ($httpCode == 200) {
-            $_SESSION['pesan_sukses'] = "Admin berhasil dihapus";
+            $_SESSION['pesan_sukses'] = "Admin berhasil dihapus.";
+        } elseif ($httpCode == 401 || $httpCode == 403) {
+            $_SESSION['pesan_error'] = "Gagal menghapus: Akses ditolak atau Token kadaluarsa.";
         } else {
             $_SESSION['pesan_error'] = "Gagal menghapus admin. Kode Error API: " . $httpCode;
         }
@@ -47,3 +58,4 @@ if (isset($_GET['id'])) {
     header("Location: kelola_admin.php");
     exit();
 }
+?>

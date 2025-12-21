@@ -5,8 +5,6 @@ if (!isset($_SESSION['login'])) {
     exit;
 }
 
-// require '../koneksi.php'; // Sudah tidak perlu koneksi DB langsung
-
 $error = '';
 $sukses = '';
 
@@ -28,31 +26,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             "nama" => $nama,
             "email" => $email,
             "username" => $username,
-            "password" => $password, // Akan di-hash otomatis oleh Spring Boot
+            "password" => $password, 
             "jabatan" => $jabatan
         ];
 
-        // 3. Kirim ke API Spring Boot menggunakan cURL
-        // Gunakan IP gateway yang berhasil Anda pakai sebelumnya
+        // 3. Ambil Token JWT dari Session
+        $token = $_SESSION['jwt_token'] ?? '';
+
+        // 4. Kirim ke API Spring Boot menggunakan cURL
         $url = "http://172.17.0.1:8080/api/admins/add";
         
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        
+        // --- TAMBAHKAN HEADER AUTHORIZATION DISINI ---
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $token // Token JWT dikirim di sini
+        ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        // 4. Cek Respon API
+        // 5. Cek Respon API
         if ($httpCode == 200 || $httpCode == 201) {
             $sukses = "Admin baru berhasil ditambahkan melalui API!";
             $_POST = array(); // Kosongkan form
+        } elseif ($httpCode == 401 || $httpCode == 403) {
+            $error = "Akses Ditolak! Token tidak valid atau sesi habis.";
         } else {
-            // Jika gagal (misal username sudah ada), API biasanya melempar error
-            $error = "Gagal menambahkan admin. Periksa apakah Username sudah terdaftar di sistem.";
+            $error = "Gagal menambahkan admin. (Error Code: $httpCode)";
         }
     }
 }
@@ -138,6 +144,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </main>
     </div>
     
+    <div class="popup-overlay" id="logout-popup">
+        <div class="popup-box">
+            <h2>Konfirmasi Logout</h2>
+            <p>Apakah Anda yakin ingin keluar?</p>
+            <div class="popup-buttons">
+                <button class="btn-cancel" id="cancel-logout-btn">Batal</button>
+                <a href="../logout.php" class="btn-confirm">Yakin</a>
+            </div>
+        </div>
+    </div>
+
     <script src="../assets/script-dashboard.js"></script>
 </body>
 </html>
