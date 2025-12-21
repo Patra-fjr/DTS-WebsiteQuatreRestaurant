@@ -57,22 +57,23 @@ public class MenuController {
         return ResponseEntity.ok(updatedMenu);
     }
 
+    // DELETE: Sekarang menjadi Soft Delete
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteMenu(@PathVariable String id) {
         try {
             Menu menu = menuRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Menu tidak ditemukan"));
-            
-            menuRepository.delete(menu);
-            
+                .orElseThrow(() -> new RuntimeException("Menu tidak ditemukan"));
+        
+            // Alih-alih menghapus, kita ubah statusnya
+            // Pastikan di database/model kamu mendukung status 'dihapus' atau semacamnya
+            menu.setStatusMenu("dihapus"); 
+            menuRepository.save(menu);
+        
             Map<String, Boolean> response = new HashMap<>();
-            response.put("deleted", Boolean.TRUE);
+            response.put("soft_deleted", Boolean.TRUE);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // Jika error karena Foreign Key (menu sudah dipesan), kirim status 409 (Conflict)
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Gagal hapus: Menu ini terikat dengan data transaksi.");
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Gagal menonaktifkan menu");
         }
-    }
+    }   
 }

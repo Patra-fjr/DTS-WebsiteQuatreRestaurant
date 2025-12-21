@@ -130,12 +130,17 @@ $kategori_nama = [
                         <?php
                         // Cek apakah data dari API tersedia
                         if ($json_data !== false && !empty($menus)) {
-                            // Mengurutkan data berdasarkan ID Menu secara ASC (sama seperti SQL ORDER BY)
+                            // Mengurutkan data berdasarkan ID Menu secara ASC
                             usort($menus, function($a, $b) {
                                 return strcmp($a['idMenu'], $b['idMenu']);
                             });
 
                             foreach($menus as $menu) {
+                                // --- LOGIKA SOFT DELETE ---
+                                // Jika status menu adalah 'dihapus', maka baris ini dilewati (tidak ditampilkan)
+                                if (isset($menu['statusMenu']) && $menu['statusMenu'] == 'dihapus') {
+                                    continue;
+                                }
                         ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($menu['idMenu']); ?></td>
