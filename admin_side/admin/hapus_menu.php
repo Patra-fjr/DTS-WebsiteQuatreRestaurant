@@ -1,29 +1,35 @@
 <?php
 session_start();
-// Pastikan hanya admin yang login yang bisa mengakses file ini
+
+// 1. Proteksi Halaman (Satpam)
 if (!isset($_SESSION['login'])) {
     header("Location: ../login.php");
     exit;
 }
 
-require '../koneksi.php';
-
-// Ambil ID menu dari URL
+// 2. Ambil ID menu dari URL
 if (isset($_GET['id'])) {
     $id_menu = $_GET['id'];
 
-    // Siapkan query DELETE yang aman
-    $sql = "DELETE FROM menu WHERE id_menu = ?";
-    $stmt = mysqli_prepare($koneksi, $sql);
-    mysqli_stmt_bind_param($stmt, "s", $id_menu);
+    // --- PROSES DELETE VIA API SPRING BOOT ---
+    
+    // Gunakan IP gateway yang berhasil digunakan sebelumnya
+    $url = "http://172.17.0.1:8080/api/menus/delete/" . $id_menu;
 
-    // Eksekusi query
-    if (mysqli_stmt_execute($stmt)) {
-        // Jika berhasil, buat pesan sukses
-        $_SESSION['pesan_sukses'] = "Menu berhasil dihapus.";
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE"); // Menggunakan HTTP DELETE
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    // Cek status code dari API (200 artinya OK/Berhasil)
+    if ($httpCode == 200) {
+        $_SESSION['pesan_sukses'] = "Menu berhasil dihapus melalui API.";
     } else {
-        // Jika gagal, buat pesan error
-        $_SESSION['pesan_error'] = "Gagal menghapus menu.";
+        // Jika gagal, bisa jadi karena menu sedang terikat di tabel transaksi
+        $_SESSION['pesan_error'] = "Gagal menghapus menu. (Error API: " . $httpCode . ")";
     }
 
     // Kembali ke halaman kelola menu
@@ -31,8 +37,7 @@ if (isset($_GET['id'])) {
     exit();
 
 } else {
-    // Jika tidak ada ID di URL, langsung tendang kembali
+    // Jika tidak ada ID di URL, kembali ke halaman utama
     header("Location: kelola_menu.php");
     exit();
 }
-?>
