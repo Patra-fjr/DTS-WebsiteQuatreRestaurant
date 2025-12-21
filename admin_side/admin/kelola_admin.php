@@ -27,13 +27,48 @@ require '../koneksi.php';
             <span>Admin Resto</span>
         </div>
         <ul class="nav-links">
-            <li><a href="dashboard.php"><i class='bx bxs-dashboard'></i><span class="link-name">Dashboard</span></a></li>
-            <li><a href="kelola_menu.php"><i class='bx bxs-food-menu'></i><span class="link-name">Kelola Menu</span></a></li>
-            <li><a href="kelola_ketersediaan.php"><i class='bx bxs-fridge'></i><span class="link-name">Ketersediaan</span></a></li>
-            <li><a href="kelola_pesanan.php"><i class='bx bxs-receipt'></i><span class="link-name">Pesanan</span></a></li>
-            <li><a href="laporan.php"><i class='bx bxs-bar-chart-alt-2'></i><span class="link-name">Laporan</span></a></li>
-            <li class="active"><a href="kelola_admin.php"><i class='bx bxs-group'></i><span class="link-name">Kelola Admin</span></a></li>
-            <li class="logout"><a href="#" id="logout-btn"><i class='bx bxs-log-out'></i><span class="link-name">Logout</span></a></li>
+            <li> 
+                <a href="dashboard.php">
+                    <i class='bx bxs-dashboard'></i>
+                    <span class="link-name">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="kelola_menu.php">
+                    <i class='bx bxs-food-menu'></i>
+                    <span class="link-name">Kelola Menu</span>
+                </a>
+            </li>
+            <li>
+                <a href="kelola_ketersediaan.php">
+                    <i class='bx bxs-fridge'></i>
+                    <span class="link-name">Ketersediaan Menu</span>
+                </a>
+            </li>
+            <li>
+                <a href="kelola_pesanan.php">
+                    <i class='bx bxs-receipt'></i>
+                    <span class="link-name">Pesanan</span>
+                </a>
+            </li>
+            <li>
+                <a href="laporan.php">
+                    <i class='bx bxs-bar-chart-alt-2'></i>
+                    <span class="link-name">Laporan</span>
+                </a>
+            </li>
+            <li class="active">
+                <a href="kelola_admin.php">
+                    <i class='bx bxs-group'></i>
+                    <span class="link-name">Kelola Admin</span>
+                </a>
+            </li>
+            <li class="logout">
+                <a href="#" id="logout-btn">
+                    <i class='bx bxs-log-out'></i>
+                    <span class="link-name">Logout</span>
+                </a>
+            </li>
         </ul>
     </div>
 
@@ -83,13 +118,14 @@ require '../koneksi.php';
                     <tbody>
                         <?php
                         // --- KODE CONSUME API SPRING BOOT DENGAN JWT ---
+                        
+                        // Sesuaikan IP Gateway Docker/Localhost kamu
                         $api_url = 'http://172.17.0.1:8080/api/admins'; 
                         
                         // 1. Ambil Token dari Session
                         $token = $_SESSION['jwt_token'] ?? '';
 
                         // 2. Siapkan Context Header (Authorization: Bearer ...)
-                        // Ini trik agar file_get_contents bisa kirim Header
                         $opts = [
                             "http" => [
                                 "method" => "GET",
@@ -100,20 +136,21 @@ require '../koneksi.php';
                         $context = stream_context_create($opts);
 
                         // 3. Ambil data JSON dengan Context
-                        // Menggunakan '@' untuk menyembunyikan warning jika API error (misal 403/401)
+                        // Menggunakan '@' agar error warning PHP tidak muncul di layar user jika gagal
                         $json_data = @file_get_contents($api_url, false, $context);
 
                         if ($json_data !== false) {
                             $admins = json_decode($json_data, true);
 
                             if (!empty($admins)) {
-                                // Urutkan manual berdasarkan nama
+                                // Urutkan manual berdasarkan nama (A-Z)
                                 usort($admins, function($a, $b) {
                                     return strcmp($a['nama'], $b['nama']);
                                 });
 
                                 foreach ($admins as $admin) {
                                     // --- FILTER SOFT DELETE ---
+                                    // Jika status admin adalah 'dihapus', jangan tampilkan
                                     if (isset($admin['statusAdmin']) && $admin['statusAdmin'] == 'dihapus') {
                                         continue; 
                                     }
@@ -140,8 +177,8 @@ require '../koneksi.php';
                                 echo "<tr><td colspan='6' style='text-align:center;'>Belum ada data admin di API.</td></tr>";
                             }
                         } else {
-                            // Jika $json_data false, berarti API menolak (biasanya token invalid/expired atau server mati)
-                            echo "<tr><td colspan='6' style='text-align:center; color:red;'>Gagal mengambil data. Token mungkin kadaluarsa atau Server mati. Silakan Login ulang.</td></tr>";
+                            // Jika $json_data false, berarti API menolak (Token Invalid) atau Server Mati
+                            echo "<tr><td colspan='6' style='text-align:center; color:red; font-weight:bold;'>Gagal mengambil data. <br>Kemungkinan Token Kadaluarsa atau Server Backend Mati. <br>Silakan coba Logout dan Login kembali.</td></tr>";
                         }
                         ?>
                     </tbody>
