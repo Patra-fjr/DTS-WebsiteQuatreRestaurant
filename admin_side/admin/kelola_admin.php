@@ -6,7 +6,7 @@ if (!isset($_SESSION['login'])) {
     exit;
 }
 
-// Kita biarkan require koneksi.php (Hybrid Architecture) jika masih dipakai di file lain
+// Kita biarkan require koneksi.php (Hybrid Architecture)
 require '../koneksi.php';
 ?>
 
@@ -84,8 +84,7 @@ require '../koneksi.php';
                         <?php
                         // --- KODE CONSUME API SPRING BOOT DENGAN JWT ---
                         
-                        // PENTING: Jika PHP pakai XAMPP & Java pakai VS Code di Windows yang sama, 
-                        // ubah IP jadi 'localhost'. Jika pakai Docker, gunakan '172.17.0.1'.
+                        // Sesuaikan IP Gateway Docker/Localhost kamu
                         $api_url = 'http://172.17.0.1:8080/api/admins'; 
                         
                         // 1. Ambil Token dari Session
@@ -101,21 +100,46 @@ require '../koneksi.php';
                         ];
                         $context = stream_context_create($opts);
 
-                        // 3. Ambil data JSON dengan Context (Suppress error warning dengan @)
-                        $json_data = @file_get_contents($api_url, false, $context);
+                        // --- MODE DETEKTIF: MENAMPILKAN ERROR ASLI ---
+                        
+                        // Kita hilangkan tanda '@' agar error PHP muncul
+                        $json_data = file_get_contents($api_url, false, $context);
 
-                        if ($json_data !== false) {
+                        if ($json_data === false) {
+                            $error = error_get_last();
+                            
+                            // Tampilkan Kotak Merah Debugging
+                            echo "<tr><td colspan='6'>";
+                            echo "<div style='background-color: #ffcccc; color: #a94442; padding: 15px; border: 2px solid #ebccd1; margin: 10px; border-radius: 5px; text-align: left;'>";
+                            echo "<h3 style='margin-top:0; color: #a94442;'><i class='bx bxs-error'></i> DETEKTIF ERROR MELAPOR:</h3>";
+                            echo "<strong>Pesan Error Asli:</strong> " . ($error['message'] ?? 'Tidak ada pesan error') . "<br><br>";
+                            
+                            echo "<strong>Analisa Penyebab:</strong><br>";
+                            if (strpos($error['message'] ?? '', 'Connection refused') !== false) {
+                                echo "👉 <strong>CONNECTION REFUSED:</strong> Server Backend MATI atau IP Salah. <br>Solusi: Cek apakah Spring Boot sudah 'Started'? Cek IP 172.17.0.1 benar?";
+                            } elseif (strpos($error['message'] ?? '', '403 Forbidden') !== false) {
+                                echo "👉 <strong>403 FORBIDDEN:</strong> Token DITOLAK. <br>Solusi: Token berhasil dikirim tapi dianggap PALSU/INVALID oleh Java. Cek JwtAuthFilter.java.";
+                            } elseif (strpos($error['message'] ?? '', '401 Unauthorized') !== false) {
+                                echo "👉 <strong>401 UNAUTHORIZED:</strong> Token SALAH/KADALUARSA. <br>Solusi: Coba Logout dan Login lagi.";
+                            } else {
+                                echo "👉 <strong>ERROR LAIN:</strong> Cek koneksi internet atau log server.";
+                            }
+                            
+                            echo "<br><br><strong>Token yang dikirim (Potongan):</strong> " . substr($token, 0, 30) . "...";
+                            echo "</div>";
+                            echo "</td></tr>";
+                            
+                        } else {
+                            // JIKA SUKSES, TAMPILKAN DATA SEPERTI BIASA
                             $admins = json_decode($json_data, true);
 
                             if (!empty($admins)) {
-                                // Urutkan manual berdasarkan nama (A-Z)
                                 usort($admins, function($a, $b) {
                                     return strcmp($a['nama'], $b['nama']);
                                 });
 
                                 foreach ($admins as $admin) {
-                                    // --- FILTER SOFT DELETE ---
-                                    // Jika status admin adalah 'dihapus', jangan tampilkan
+                                    // Filter Soft Delete
                                     if (isset($admin['statusAdmin']) && $admin['statusAdmin'] == 'dihapus') {
                                         continue; 
                                     }
@@ -141,9 +165,6 @@ require '../koneksi.php';
                             } else {
                                 echo "<tr><td colspan='6' style='text-align:center;'>Belum ada data admin di API.</td></tr>";
                             }
-                        } else {
-                            // Jika $json_data false, berarti API menolak atau Server Mati
-                            echo "<tr><td colspan='6' style='text-align:center; color:red; font-weight:bold;'>Gagal mengambil data.<br>Pastikan Server Spring Boot Menyala & Token Valid.<br>Coba Logout dan Login kembali.</td></tr>";
                         }
                         ?>
                     </tbody>
