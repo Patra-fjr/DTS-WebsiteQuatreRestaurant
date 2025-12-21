@@ -15,7 +15,7 @@ require '../koneksi.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Kelola Admin - Admin Resto</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="../assets/style-dashboard.css">
 </head>
@@ -84,7 +84,7 @@ require '../koneksi.php';
                         <?php
                         // --- KODE CONSUME API SPRING BOOT DENGAN JWT ---
                         
-                        // Sesuaikan IP Gateway Docker/Localhost kamu
+                        // Konfigurasi URL API
                         $api_url = 'http://172.17.0.1:8080/api/admins'; 
                         
                         // 1. Ambil Token dari Session
@@ -100,46 +100,22 @@ require '../koneksi.php';
                         ];
                         $context = stream_context_create($opts);
 
-                        // --- MODE DETEKTIF: MENAMPILKAN ERROR ASLI ---
-                        
-                        // Kita hilangkan tanda '@' agar error PHP muncul
-                        $json_data = file_get_contents($api_url, false, $context);
+                        // 3. Ambil data JSON dengan Context
+                        // Menggunakan '@' untuk menyembunyikan warning teknis agar tampilan tetap rapi
+                        $json_data = @file_get_contents($api_url, false, $context);
 
-                        if ($json_data === false) {
-                            $error = error_get_last();
-                            
-                            // Tampilkan Kotak Merah Debugging
-                            echo "<tr><td colspan='6'>";
-                            echo "<div style='background-color: #ffcccc; color: #a94442; padding: 15px; border: 2px solid #ebccd1; margin: 10px; border-radius: 5px; text-align: left;'>";
-                            echo "<h3 style='margin-top:0; color: #a94442;'><i class='bx bxs-error'></i> DETEKTIF ERROR MELAPOR:</h3>";
-                            echo "<strong>Pesan Error Asli:</strong> " . ($error['message'] ?? 'Tidak ada pesan error') . "<br><br>";
-                            
-                            echo "<strong>Analisa Penyebab:</strong><br>";
-                            if (strpos($error['message'] ?? '', 'Connection refused') !== false) {
-                                echo "👉 <strong>CONNECTION REFUSED:</strong> Server Backend MATI atau IP Salah. <br>Solusi: Cek apakah Spring Boot sudah 'Started'? Cek IP 172.17.0.1 benar?";
-                            } elseif (strpos($error['message'] ?? '', '403 Forbidden') !== false) {
-                                echo "👉 <strong>403 FORBIDDEN:</strong> Token DITOLAK. <br>Solusi: Token berhasil dikirim tapi dianggap PALSU/INVALID oleh Java. Cek JwtAuthFilter.java.";
-                            } elseif (strpos($error['message'] ?? '', '401 Unauthorized') !== false) {
-                                echo "👉 <strong>401 UNAUTHORIZED:</strong> Token SALAH/KADALUARSA. <br>Solusi: Coba Logout dan Login lagi.";
-                            } else {
-                                echo "👉 <strong>ERROR LAIN:</strong> Cek koneksi internet atau log server.";
-                            }
-                            
-                            echo "<br><br><strong>Token yang dikirim (Potongan):</strong> " . substr($token, 0, 30) . "...";
-                            echo "</div>";
-                            echo "</td></tr>";
-                            
-                        } else {
-                            // JIKA SUKSES, TAMPILKAN DATA SEPERTI BIASA
+                        if ($json_data !== false) {
                             $admins = json_decode($json_data, true);
 
                             if (!empty($admins)) {
+                                // Fitur: Urutkan data berdasarkan Nama (A-Z)
                                 usort($admins, function($a, $b) {
                                     return strcmp($a['nama'], $b['nama']);
                                 });
 
                                 foreach ($admins as $admin) {
-                                    // Filter Soft Delete
+                                    // Fitur: Filter Soft Delete
+                                    // Admin yang statusnya 'dihapus' dilewati (tidak ditampilkan)
                                     if (isset($admin['statusAdmin']) && $admin['statusAdmin'] == 'dihapus') {
                                         continue; 
                                     }
@@ -153,7 +129,10 @@ require '../koneksi.php';
                                         <td>
                                             <a href="edit_admin.php?id=<?php echo $admin['idAdmin']; ?>" class="btn-edit">Edit</a>
                                             
-                                            <?php if ($admin['idAdmin'] != $_SESSION['id_admin']): ?>
+                                            <?php 
+                                            // Mencegah admin menghapus akunnya sendiri yang sedang login
+                                            if ($admin['idAdmin'] != $_SESSION['id_admin']): 
+                                            ?>
                                                 <a href="hapus_admin.php?id=<?php echo $admin['idAdmin']; ?>" 
                                                    class="btn-delete" 
                                                    onclick="return confirm('Apakah Anda yakin ingin menghapus admin ini?');">Hapus</a>
@@ -163,8 +142,14 @@ require '../koneksi.php';
                         <?php
                                 }
                             } else {
-                                echo "<tr><td colspan='6' style='text-align:center;'>Belum ada data admin di API.</td></tr>";
+                                echo "<tr><td colspan='6' style='text-align:center;'>Belum ada data admin.</td></tr>";
                             }
+                        } else {
+                            // Tampilan Error yang Sopan (User Friendly) jika API gagal/mati
+                            echo "<tr><td colspan='6' style='text-align:center; padding: 20px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px;'>";
+                            echo "<i class='bx bxs-error-circle'></i> <strong>Gagal Terhubung ke Server.</strong><br>";
+                            echo "<small>Silakan coba Logout dan Login kembali. Jika masalah berlanjut, pastikan Server Backend menyala.</small>";
+                            echo "</td></tr>";
                         }
                         ?>
                     </tbody>
