@@ -5,8 +5,8 @@ if (!isset($_SESSION['login'])) {
     exit;
 }
 
-// 1. Ambil data kategori via API untuk dropdown
-$api_url_menus = 'http://172.17.0.1:8080/api/menus';
+// 1. Ambil data kategori via API untuk dropdown (simulasi statis karena belum ada API kategori)
+// $api_url_menus = 'http://172.17.0.1:8080/api/menus'; // Tidak dipakai di script ini
 $kategori_nama = [
     'kat001' => 'Makanan',
     'kat002' => 'Minuman'
@@ -24,18 +24,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $deskripsi = $_POST['deskripsi'];
     $nama_gambar = NULL;
 
-    // --- 2. LOGIKA UPLOAD GAMBAR LOKAL ---
-    if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] == 0 && !empty($_FILES['gambar']['name'])) {
-        $target_dir = "../assets/image/"; 
-        $nama_gambar = uniqid() . '-' . basename($_FILES["gambar"]["name"]);
-        $target_file = $target_dir . $nama_gambar;
-        $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
-
-        if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg") {
-            $error = "Maaf, hanya file JPG, JPEG, & PNG yang diizinkan.";
+    // --- 2. LOGIKA UPLOAD GAMBAR LOKAL (DIPERBAIKI) ---
+    if (isset($_FILES['gambar']) && !empty($_FILES['gambar']['name'])) {
+        
+        if ($_FILES['gambar']['error'] !== UPLOAD_ERR_OK) {
+            $error = "Upload Gagal! Kode Error PHP: " . $_FILES['gambar']['error'];
         } else {
-            if (!move_uploaded_file($_FILES["gambar"]["tmp_name"], $target_file)) {
-                $error = "Gagal meng-upload gambar ke folder assets.";
+            // Gunakan __DIR__ untuk path absolut yang aman
+            // Mundur satu level dari 'admin/' ke 'admin_side/', lalu masuk 'assets/image/'
+            $target_dir = __DIR__ . "/../assets/image/"; 
+            
+            // Cek dan buat folder jika belum ada
+            if (!is_dir($target_dir)) {
+                if (!mkdir($target_dir, 0777, true)) {
+                    $error = "Gagal membuat folder assets/image. Cek permission!";
+                }
+            }
+
+            if (empty($error)) {
+                $nama_gambar = uniqid() . '-' . basename($_FILES["gambar"]["name"]);
+                $target_file = $target_dir . $nama_gambar;
+                
+                $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+
+                if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg") {
+                    $error = "Maaf, hanya file JPG, JPEG, & PNG yang diizinkan.";
+                } else {
+                    if (move_uploaded_file($_FILES["gambar"]["tmp_name"], $target_file)) {
+                        // Upload Berhasil!
+                    } else {
+                        $error = "Gagal memindahkan file gambar. Cek permission folder assets/image!";
+                    }
+                }
             }
         }
     }
@@ -52,7 +72,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             "gambar" => $nama_gambar
         ];
 
+        // Pastikan IP ini benar sesuai konfigurasi Docker/Network kamu
         $url_add = "http://172.17.0.1:8080/api/menus/add";
+        
         $ch = curl_init($url_add);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -65,9 +87,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         if ($httpCode == 200 || $httpCode == 201) {
             $sukses = "Menu baru berhasil ditambahkan via API!";
-            $_POST = array(); 
+            $_POST = array(); // Reset form
         } else {
             $error = "Gagal menambahkan menu ke API. (Error Code: $httpCode)";
+            // Opsional: Hapus gambar jika API gagal agar tidak jadi sampah
+            if ($nama_gambar && file_exists($target_dir . $nama_gambar)) {
+                unlink($target_dir . $nama_gambar);
+            }
         }
     }
 }
@@ -81,7 +107,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Tambah Menu Baru</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="../assets/style-dashboard.css">
-    </head>
+</head>
 <body>
 
     <div class="sidebar">
