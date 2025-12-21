@@ -30,7 +30,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $error = "Upload Gagal! Kode Error PHP: " . $_FILES['gambar']['error'];
         } else {
             // Gunakan __DIR__ untuk path absolut yang aman
-            $target_dir = __DIR__ . "/assets/image/";
+            // Gunakan /../ untuk mundur satu folder ke 'admin_side/assets/image'
+            $target_dir = __DIR__ . "/../assets/image/";
             
             // Cek dan buat folder jika belum ada
             if (!is_dir($target_dir)) {

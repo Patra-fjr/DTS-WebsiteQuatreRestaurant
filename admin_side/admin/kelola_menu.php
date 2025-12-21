@@ -122,7 +122,7 @@ $menus = json_decode($json_data, true);
                                     <td><?php echo htmlspecialchars($menu['idMenu']); ?></td>
                                     <td>
                                         <?php if (!empty($menu['gambar'])): ?>
-                                            <img src="assets/image/<?php echo htmlspecialchars($menu['gambar']); ?>" alt="Gambar Menu" class="menu-table-img">
+                                            <img src="../assets/image/<?php echo htmlspecialchars($menu['gambar']); ?>" alt="Gambar Menu" class="menu-table-img">
                                         <?php else: ?>
                                             <span>(No Image)</span>
                                         <?php endif; ?>

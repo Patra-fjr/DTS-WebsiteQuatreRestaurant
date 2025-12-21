@@ -62,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Cek upload gambar baru
     if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] == 0 && !empty($_FILES['gambar']['name'])) {
-        $target_dir = __DIR__ . "/assets/image/";
+        $target_dir = __DIR__ . "/../assets/image/";
         $nama_gambar_baru = uniqid() . '-' . basename($_FILES["gambar"]["name"]);
         $target_file = $target_dir . $nama_gambar_baru;
         
