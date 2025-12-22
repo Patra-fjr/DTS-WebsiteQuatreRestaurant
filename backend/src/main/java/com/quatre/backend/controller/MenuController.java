@@ -36,7 +36,7 @@ public class MenuController {
     public Menu addMenu(@RequestBody Menu menu) {
         // Generate ID Otomatis jika kosong
         if (menu.getIdMenu() == null || menu.getIdMenu().isEmpty()) {
-            menu.setIdMenu("men" + (int)(Math.random() * 1000));
+            menu.setIdMenu("menu" + (int)(Math.random() * 1000));
         }
         return menuRepository.save(menu);
     }
