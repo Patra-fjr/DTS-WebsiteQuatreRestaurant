@@ -3,6 +3,7 @@ package com.quatre.backend.model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.math.BigDecimal; // PENTING: Wajib import ini untuk uang (DECIMAL)
 
 @Entity
 @Table(name = "orders")
@@ -26,13 +27,16 @@ public class Orders {
     @Column(name = "waktu_order")
     private LocalTime waktuOrder;
 
+    // UBAH DARI Double KE BigDecimal (Agar cocok dengan SQL DECIMAL)
     @Column(name = "total_harga")
-    private Double totalHarga;
+    private BigDecimal totalHarga;
 
-    @Column(name = "status_order")
-    private String statusOrder; // 'proses', 'selesai'
+    @Column(name = "status_order", columnDefinition = "ENUM('selesai','proses')")
+    private String statusOrder;
 
-    // Getters & Setters
+    // ==========================
+    // GETTERS & SETTERS
+    // ==========================
     public String getIdOrder() { return idOrder; }
     public void setIdOrder(String idOrder) { this.idOrder = idOrder; }
     
@@ -51,8 +55,9 @@ public class Orders {
     public LocalTime getWaktuOrder() { return waktuOrder; }
     public void setWaktuOrder(LocalTime waktuOrder) { this.waktuOrder = waktuOrder; }
     
-    public Double getTotalHarga() { return totalHarga; }
-    public void setTotalHarga(Double totalHarga) { this.totalHarga = totalHarga; }
+    // Perhatikan tipe datanya sekarang BigDecimal
+    public BigDecimal getTotalHarga() { return totalHarga; }
+    public void setTotalHarga(BigDecimal totalHarga) { this.totalHarga = totalHarga; }
     
     public String getStatusOrder() { return statusOrder; }
     public void setStatusOrder(String statusOrder) { this.statusOrder = statusOrder; }

@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal; // <--- WAJIB IMPORT
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
@@ -29,13 +31,26 @@ public class OrderController {
     public ResponseEntity<?> createOrder(@RequestBody OrderRequest request) {
         try {
             String idOrder = "ORD" + (100000 + new Random().nextInt(900000));
-            double totalHarga = 0;
             
+            // 1. Inisialisasi BigDecimal (Bukan 0 biasa)
+            BigDecimal totalHarga = BigDecimal.ZERO;
+            
+            // 2. Hitung Total Harga (Looping)
             for (OrderRequest.OrderItem item : request.getItems()) {
-                totalHarga += item.getHargaSatuan() * item.getQuantity();
+                // Konversi harga (double) dan quantity (int) ke BigDecimal dulu
+                BigDecimal hargaSatuan = BigDecimal.valueOf(item.getHargaSatuan());
+                BigDecimal qty = BigDecimal.valueOf(item.getQuantity());
+                
+                // Rumus: totalHarga = totalHarga + (harga * qty)
+                totalHarga = totalHarga.add(hargaSatuan.multiply(qty));
             }
-            double totalFinal = totalHarga * 1.1; // Pajak
 
+            // 3. Hitung Pajak (Total * 1.1)
+            // Kita pakai string "1.1" agar presisi desimalnya akurat
+            BigDecimal pajak = new BigDecimal("1.1");
+            BigDecimal totalFinal = totalHarga.multiply(pajak);
+
+            // 4. Simpan ke Orders
             Orders order = new Orders();
             order.setIdOrder(idOrder);
             order.setNamaCustomer(request.getNamaCustomer());
@@ -43,19 +58,27 @@ public class OrderController {
             order.setIdMeja(request.getIdMeja());
             order.setTanggalOrder(LocalDate.now());
             order.setWaktuOrder(LocalTime.now());
-            order.setTotalHarga(totalFinal);
+            order.setTotalHarga(totalFinal); // <--- Sekarang sudah cocok (BigDecimal)
             order.setStatusOrder("proses");
             ordersRepository.save(order);
 
+            // 5. Simpan Detail Orders
             for (OrderRequest.OrderItem item : request.getItems()) {
                 DetailOrders detail = new DetailOrders();
                 detail.setIdOrder(idOrder);
                 detail.setIdMenu(item.getIdMenu());
                 detail.setQuantity(item.getQuantity());
-                detail.setSubtotal(item.getHargaSatuan() * item.getQuantity());
+                
+                // Hitung Subtotal per Item (Harga * Qty)
+                BigDecimal hargaSatuan = BigDecimal.valueOf(item.getHargaSatuan());
+                BigDecimal qty = BigDecimal.valueOf(item.getQuantity());
+                BigDecimal subtotal = hargaSatuan.multiply(qty);
+
+                detail.setSubtotal(subtotal); // <--- Sekarang sudah cocok (BigDecimal)
                 detailOrdersRepository.save(detail);
             }
 
+            // 6. Update Status Meja
             Meja meja = mejaRepository.findById(request.getIdMeja()).orElse(null);
             if (meja != null) {
                 meja.setStatusMeja("tidak tersedia");
@@ -69,6 +92,7 @@ public class OrderController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
+            e.printStackTrace(); // Biar errornya kelihatan di console log
             return ResponseEntity.status(500).body("Gagal order: " + e.getMessage());
         }
     }

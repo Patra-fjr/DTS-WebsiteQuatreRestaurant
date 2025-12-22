@@ -23,10 +23,10 @@ public class Transaksi {
     @Column(name = "waktu_transaksi")
     private LocalTime waktuTransaksi;
 
-    @Column(name = "metode_transaksi")
+    @Column(name = "metode_transaksi", columnDefinition = "ENUM('Tunai','Transfer')")
     private String metodeTransaksi;
 
-    @Column(name = "status_transaksi")
+    @Column(name = "status_transaksi", columnDefinition = "ENUM('Selesai','Belum Bayar')")
     private String statusTransaksi;
 
     // Getters & Setters

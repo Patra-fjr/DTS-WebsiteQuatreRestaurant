@@ -1,6 +1,7 @@
 package com.quatre.backend.model;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal; // <--- WAJIB IMPORT INI
 
 @Entity
 @Table(name = "detail_orders")
@@ -8,7 +9,7 @@ public class DetailOrders {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_detailorder")
-    private Long idDetailOrder;
+    private Integer idDetailOrder;
 
     @Column(name = "id_order")
     private String idOrder;
@@ -20,11 +21,11 @@ public class DetailOrders {
     private Integer quantity;
 
     @Column(name = "subtotal")
-    private Double subtotal;
+    private BigDecimal subtotal; // <--- UBAH JADI BigDecimal
 
-    // Getters & Setters
-    public Long getIdDetailOrder() { return idDetailOrder; }
-    public void setIdDetailOrder(Long idDetailOrder) { this.idDetailOrder = idDetailOrder; }
+    // --- GETTER SETTER ---
+    public Integer getIdDetailOrder() { return idDetailOrder; }
+    public void setIdDetailOrder(Integer idDetailOrder) { this.idDetailOrder = idDetailOrder; }
 
     public String getIdOrder() { return idOrder; }
     public void setIdOrder(String idOrder) { this.idOrder = idOrder; }
@@ -35,6 +36,7 @@ public class DetailOrders {
     public Integer getQuantity() { return quantity; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
 
-    public Double getSubtotal() { return subtotal; }
-    public void setSubtotal(Double subtotal) { this.subtotal = subtotal; }
+    // Update Getter Setter Subtotal
+    public BigDecimal getSubtotal() { return subtotal; }
+    public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
 }

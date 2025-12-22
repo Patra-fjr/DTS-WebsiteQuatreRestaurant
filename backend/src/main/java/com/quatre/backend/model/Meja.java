@@ -12,8 +12,8 @@ public class Meja {
     @Column(name = "nomor_meja")
     private Integer nomorMeja;
 
-    @Column(name = "status_meja")
-    private String statusMeja; // "tersedia" atau "tidak tersedia"
+    @Column(name = "status_meja", columnDefinition = "ENUM('tersedia','tidak tersedia')")
+    private String statusMeja;
 
     // --- GETTER & SETTER ---
     public String getIdMeja() { return idMeja; }
