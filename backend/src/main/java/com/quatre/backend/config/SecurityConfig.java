@@ -15,6 +15,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -29,17 +34,40 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Matikan CSRF karena pakai Token
+            .csrf(csrf -> csrf.disable()) // Matikan CSRF
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // TAMBAHAN: Aktifkan CORS Global
             .authorizeHttpRequests(auth -> auth
-                // Izinkan Login & Endpoint Public (User Side)
-                .requestMatchers("/api/admins/login", "/api/menus/**").permitAll() 
-                .anyRequest().authenticated() // Sisanya harus login
+                // === DAFTAR YANG BOLEH DIAKSES TANPA LOGIN ===
+                .requestMatchers(
+                    "/api/admins/login", 
+                    "/api/admins/add",   // Penting: Biar bisa bikin admin baru yang valid
+                    "/api/menus/**",     
+                    "/api/meja/**",      // WAJIB: Biar halaman user muncul mejanya
+                    "/api/orders/**"     // WAJIB: Biar user bisa checkout order
+                ).permitAll()
+                
+                // SISANYA HARUS LOGIN
+                .anyRequest().authenticated()
             )
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    // === TAMBAHAN: KONFIGURASI CORS AGAR PHP TIDAK DIBLOKIR ===
+    @Bean
+    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(List.of("*")); // Izinkan semua domain (termasuk localhost PHP)
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     @Bean

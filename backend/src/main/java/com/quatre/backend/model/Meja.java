@@ -10,7 +10,7 @@ public class Meja {
     private String idMeja;
 
     @Column(name = "nomor_meja")
-    private String nomorMeja;
+    private Integer nomorMeja;
 
     @Column(name = "status_meja")
     private String statusMeja; // "tersedia" atau "tidak tersedia"
@@ -19,8 +19,8 @@ public class Meja {
     public String getIdMeja() { return idMeja; }
     public void setIdMeja(String idMeja) { this.idMeja = idMeja; }
 
-    public String getNomorMeja() { return nomorMeja; }
-    public void setNomorMeja(String nomorMeja) { this.nomorMeja = nomorMeja; }
+    public Integer getNomorMeja() { return nomorMeja; }
+    public void setNomorMeja(Integer nomorMeja) { this.nomorMeja = nomorMeja; }
 
     public String getStatusMeja() { return statusMeja; }
     public void setStatusMeja(String statusMeja) { this.statusMeja = statusMeja; }
