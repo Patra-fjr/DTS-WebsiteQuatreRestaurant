@@ -1,13 +1,13 @@
 # DTS Website Quatre Restaurant
 
-Proyek website restaurant management system yang dikembangkan sebagai tugas akhir mata kuliah pemrograman web di kampus. Website ini dibangun menggunakan PHP dengan arsitektur Spring Boot dan Docker containerization.
+Proyek website restaurant management system yang dikembangkan sebagai tugas projek pemrograman web di kampus. Website ini dibangun menggunakan PHP dengan arsitektur Spring Boot dan Docker containerization.
 
 > **⚠️ Catatan Keamanan**: Repository ini merupakan versi publik untuk keperluan portfolio. Repository asli bersifat private untuk menjaga keamanan data dan konfigurasi sensitif.
 
 ## 👥 Tim Pengembang
 
 Proyek ini dikerjakan oleh:
-- **Patra-fjr** (Patra Fajri)
+- **Patra-fjr** (Putra Fajar)
 - **Taufik Dermawan** (Partner)
 
 ## 📋 Deskripsi Proyek
