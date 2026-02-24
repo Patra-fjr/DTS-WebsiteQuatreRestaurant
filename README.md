@@ -124,6 +124,6 @@ Untuk informasi lebih lanjut, silakan hubungi:
 
 ---
 
-**Developed with ❤️ by Patra Fajri & Taufik Dermawan**
+**Developed with ❤️ by Putra Fajar & Taufik Dermawan**
 
 *Digital Talent Scholarship - Web Programming Project*
